@@ -6,33 +6,32 @@
 package org.jetbrains.kotlin.descriptors.commonizer.mergedtree
 
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirName
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeSignature
 import org.jetbrains.kotlin.descriptors.commonizer.core.Commonizer
 import org.jetbrains.kotlin.descriptors.commonizer.utils.*
-import org.jetbrains.kotlin.descriptors.commonizer.utils.intern
 import org.jetbrains.kotlin.descriptors.commonizer.utils.signature
-import org.jetbrains.kotlin.name.Name
 
 /** Used for approximation of [PropertyDescriptor]s before running concrete [Commonizer]s */
 data class PropertyApproximationKey(
-    val name: Name,
+    val name: CirName,
     val extensionReceiverParameterType: CirTypeSignature?
 ) {
     constructor(property: PropertyDescriptor) : this(
-        property.name.intern(),
+        CirName.create(property.name),
         property.extensionReceiverParameter?.type?.signature
     )
 }
 
 /** Used for approximation of [SimpleFunctionDescriptor]s before running concrete [Commonizer]s */
 data class FunctionApproximationKey(
-    val name: Name,
+    val name: CirName,
     val valueParametersTypes: Array<CirTypeSignature>,
     private val additionalValueParametersNamesHash: Int,
     val extensionReceiverParameterType: CirTypeSignature?
 ) {
     constructor(function: SimpleFunctionDescriptor) : this(
-        function.name.intern(),
+        CirName.create(function.name),
         function.valueParameters.toTypeSignatures(),
         additionalValueParameterNamesHash(function),
         function.extensionReceiverParameter?.type?.signature
@@ -85,5 +84,5 @@ private fun additionalValueParameterNamesHash(callable: FunctionDescriptor): Int
     if (callable.annotations.none { it.isObjCInteropCallableAnnotation })
         return 0 // do not calculate hash for non-ObjC callables
 
-    return callable.valueParameters.fold(0) { acc, next -> acc.appendHashCode(next.name) }
+    return callable.valueParameters.fold(0) { acc, next -> acc.appendHashCode(next.name.asString()) }
 }

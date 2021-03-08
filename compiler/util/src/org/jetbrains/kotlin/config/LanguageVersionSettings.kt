@@ -199,6 +199,7 @@ enum class LanguageFeature(
     InlineClasses(sinceVersion = KOTLIN_1_3, defaultState = State.ENABLED_WITH_WARNING, kind = UNSTABLE_FEATURE),
     JvmInlineValueClasses(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = OTHER),
     SuspendFunctionsInFunInterfaces(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = OTHER),
+    SamWrapperClassesAreSynthetic(sinceVersion = KOTLIN_1_5, defaultState = State.ENABLED, kind = BUG_FIX)
     ;
 
     val presentableName: String
@@ -381,6 +382,9 @@ class LanguageVersionSettingsImpl @JvmOverloads constructor(
                 LanguageFeature.State.ENABLED_WITH_ERROR, LanguageFeature.State.DISABLED -> '-'
             }
             append(" $char$feature")
+        }
+        analysisFlags.forEach { (flag, value) ->
+            append(" $flag:$value")
         }
     }
 

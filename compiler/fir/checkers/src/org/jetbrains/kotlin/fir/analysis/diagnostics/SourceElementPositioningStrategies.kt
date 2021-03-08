@@ -18,6 +18,11 @@ object SourceElementPositioningStrategies {
         PositioningStrategies.VAL_OR_VAR_NODE
     )
 
+    val COMPANION_OBJECT = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.COMPANION_OBJECT,
+        PositioningStrategies.COMPANION_OBJECT
+    )
+
     val SECONDARY_CONSTRUCTOR_DELEGATION_CALL = SourceElementPositioningStrategy(
         LightTreePositioningStrategies.SECONDARY_CONSTRUCTOR_DELEGATION_CALL,
         PositioningStrategies.SECONDARY_CONSTRUCTOR_DELEGATION_CALL
@@ -83,6 +88,21 @@ object SourceElementPositioningStrategies {
         PositioningStrategies.VARIANCE_MODIFIER
     )
 
+    val CONST_MODIFIER = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.CONST_MODIFIER,
+        PositioningStrategies.CONST_MODIFIER
+    )
+
+    val INLINE_OR_VALUE_MODIFIER = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.INLINE_OR_VALUE_MODIFIER,
+        PositioningStrategies.INLINE_OR_VALUE_MODIFIER
+    )
+
+    val INNER_MODIFIER = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.INNER_MODIFIER,
+        PositioningStrategies.INNER_MODIFIER
+    )
+
     val OPERATOR = SourceElementPositioningStrategy(
         LightTreePositioningStrategies.OPERATOR,
         PositioningStrategies.OPERATOR
@@ -98,8 +118,29 @@ object SourceElementPositioningStrategies {
         PositioningStrategies.PARAMETER_VARARG_MODIFIER
     )
 
-    val DOT_BY_SELECTOR = SourceElementPositioningStrategy(
-        LightTreePositioningStrategies.DOT_BY_SELECTOR,
-        PositioningStrategies.DOT_BY_SELECTOR
+    val DOT_BY_QUALIFIED = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.DOT_BY_QUALIFIED,
+        PositioningStrategies.DOT_BY_QUALIFIED
     )
+
+    val SELECTOR_BY_QUALIFIED = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.SELECTOR_BY_QUALIFIED,
+        PositioningStrategies.SELECTOR_BY_QUALIFIED
+    )
+
+    val REFERENCE_BY_QUALIFIED = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.REFERENCE_BY_QUALIFIED,
+        PositioningStrategies.REFERENCE_BY_QUALIFIED
+    )
+
+    val WHEN_EXPRESSION = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.WHEN_EXPRESSION,
+        PositioningStrategies.WHEN_EXPRESSION
+    )
+
+    val IF_EXPRESSION = SourceElementPositioningStrategy(
+        LightTreePositioningStrategies.IF_EXPRESSION,
+        PositioningStrategies.IF_EXPRESSION
+    )
+
 }

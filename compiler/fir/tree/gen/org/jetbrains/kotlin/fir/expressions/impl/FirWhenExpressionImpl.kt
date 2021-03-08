@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.fir.expressions.impl
 
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirVariable
+import org.jetbrains.kotlin.fir.expressions.ExhaustivenessStatus
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
@@ -21,14 +22,15 @@ import org.jetbrains.kotlin.fir.visitors.*
  */
 
 internal class FirWhenExpressionImpl(
-    override val source: FirSourceElement?,
+    override var source: FirSourceElement?,
     override var typeRef: FirTypeRef,
     override val annotations: MutableList<FirAnnotationCall>,
     override var calleeReference: FirReference,
     override var subject: FirExpression?,
     override var subjectVariable: FirVariable<*>?,
     override val branches: MutableList<FirWhenBranch>,
-    override var isExhaustive: Boolean,
+    override var exhaustivenessStatus: ExhaustivenessStatus?,
+    override val usedAsExpression: Boolean,
 ) : FirWhenExpression() {
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         typeRef.accept(visitor, data)
@@ -82,6 +84,10 @@ internal class FirWhenExpressionImpl(
         return this
     }
 
+    override fun replaceSource(newSource: FirSourceElement?) {
+        source = newSource
+    }
+
     override fun replaceTypeRef(newTypeRef: FirTypeRef) {
         typeRef = newTypeRef
     }
@@ -90,7 +96,7 @@ internal class FirWhenExpressionImpl(
         calleeReference = newCalleeReference
     }
 
-    override fun replaceIsExhaustive(newIsExhaustive: Boolean) {
-        isExhaustive = newIsExhaustive
+    override fun replaceExhaustivenessStatus(newExhaustivenessStatus: ExhaustivenessStatus?) {
+        exhaustivenessStatus = newExhaustivenessStatus
     }
 }

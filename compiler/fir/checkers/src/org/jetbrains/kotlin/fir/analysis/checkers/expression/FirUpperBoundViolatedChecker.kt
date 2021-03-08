@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.types.AbstractTypeChecker
-import org.jetbrains.kotlin.types.AbstractTypeCheckerContext
 import org.jetbrains.kotlin.utils.addToStdlib.min
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
@@ -43,11 +42,11 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
             return
         }
 
-        val parameterPairs = mutableMapOf<FirTypeParameterSymbol, FirResolvedTypeRef>()
+        val parameterPairs = mutableMapOf<FirTypeParameterSymbol, FirTypeRef>()
 
         for (it in 0 until count) {
             expression.typeArguments[it].safeAs<FirTypeProjectionWithVariance>()
-                ?.typeRef.safeAs<FirResolvedTypeRef>()
+                ?.typeRef
                 ?.let { that ->
                     if (that !is FirErrorTypeRef) {
                         parameterPairs[calleeFir.typeParameters[it].symbol] = that
@@ -60,12 +59,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         // we substitute actual values to the
         // type parameters from the declaration
         val substitutor = substitutorByMap(
-            parameterPairs.mapValues { it.value.type }
-        )
-
-        val typeCheckerContext = context.session.typeContext.newBaseTypeCheckerContext(
-            errorTypesEqualToAnything = false,
-            stubTypesEqualToAnything = false
+            parameterPairs.mapValues { it.value.coneType }
         )
 
         parameterPairs.forEach { (proto, actual) ->
@@ -74,15 +68,15 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
                 return@forEach
             }
 
-            if (!satisfiesBounds(proto, actual.type, substitutor, typeCheckerContext)) {
-                reporter.reportOn(actual.source, proto, actual.type, context)
+            if (!satisfiesBounds(proto, actual.coneType, substitutor, context.session.typeContext)) {
+                reporter.reportOn(actual.source, proto, actual.coneType, context)
                 return
             }
 
             // we must analyze nested things like
             // S<S<K, L>, T<K, L>>()
-            actual.type.safeAs<ConeClassLikeType>()?.let {
-                val errorOccurred = analyzeTypeParameters(it, context, reporter, typeCheckerContext, actual.source)
+            actual.coneType.safeAs<ConeClassLikeType>()?.let {
+                val errorOccurred = analyzeTypeParameters(it, context, reporter, context.session.typeContext, actual.source)
 
                 if (errorOccurred) {
                     return
@@ -99,14 +93,14 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         // typealias A<G> = B<List<G>>
         // val a = A<Int>()
         when (calleeFir) {
-            is FirConstructor -> analyzeConstructorCall(expression, substitutor, typeCheckerContext, reporter, context)
+            is FirConstructor -> analyzeConstructorCall(expression, substitutor, context.session.typeContext, reporter, context)
         }
     }
 
     private fun analyzeConstructorCall(
         functionCall: FirQualifiedAccessExpression,
         callSiteSubstitutor: ConeSubstitutor,
-        typeCheckerContext: AbstractTypeCheckerContext,
+        typeSystemContext: ConeTypeContext,
         reporter: DiagnosticReporter,
         context: CheckerContext
     ) {
@@ -125,8 +119,8 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         val actualConstructor = functionCall.calleeReference.safeAs<FirResolvedNamedReference>()
             ?.resolvedSymbol.safeAs<FirConstructorSymbol>()
             ?.fir.safeAs<FirConstructor>()
-            ?.returnTypeRef.safeAs<FirResolvedTypeRef>()
-            ?.type.safeAs<ConeClassLikeType>()
+            ?.returnTypeRef?.coneType
+            ?.safeAs<ConeClassLikeType>()
             ?: return
 
         val count = min(protoConstructor.typeParameters.size, actualConstructor.typeArguments.size)
@@ -157,8 +151,8 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
 
         constructorsParameterPairs.forEach { (proto, actual) ->
             // just in case
-            var intersection = typeCheckerContext.intersectTypes(
-                proto.fir.bounds.filterIsInstance<FirResolvedTypeRef>().map { it.type }
+            var intersection = typeSystemContext.intersectTypes(
+                proto.fir.bounds.map { it.coneType }
             ).safeAs<ConeKotlinType>() ?: return@forEach
 
             intersection = declarationSiteSubstitutor.substituteOrSelf(intersection)
@@ -167,7 +161,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
             // substitute Int for G from
             // the example above
             val target = callSiteSubstitutor.substituteOrSelf(actual)
-            val satisfiesBounds = AbstractTypeChecker.isSubtypeOf(typeCheckerContext, target, intersection)
+            val satisfiesBounds = AbstractTypeChecker.isSubtypeOf(typeSystemContext, target, intersection)
 
             if (!satisfiesBounds) {
                 reporter.reportOn(functionCall.source, proto, actual, context)
@@ -187,7 +181,7 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         type: ConeClassLikeType,
         context: CheckerContext,
         reporter: DiagnosticReporter,
-        typeCheckerContext: AbstractTypeCheckerContext,
+        typeSystemContext: ConeTypeContext,
         reportTarget: FirSourceElement?
     ): Boolean {
         val prototypeClass = type.lookupTag.toSymbol(context.session)
@@ -218,13 +212,13 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         )
 
         parameterPairs.forEach { (proto, actual) ->
-            if (!satisfiesBounds(proto, actual.type, substitutor, typeCheckerContext)) {
+            if (!satisfiesBounds(proto, actual.type, substitutor, typeSystemContext)) {
                 // should report on the parameter instead!
                 reporter.reportOn(reportTarget, proto, actual, context)
                 return true
             }
 
-            val errorOccurred = analyzeTypeParameters(actual, context, reporter, typeCheckerContext, reportTarget)
+            val errorOccurred = analyzeTypeParameters(actual, context, reporter, typeSystemContext, reportTarget)
 
             if (errorOccurred) {
                 return true
@@ -242,14 +236,14 @@ object FirUpperBoundViolatedChecker : FirQualifiedAccessChecker() {
         prototypeSymbol: FirTypeParameterSymbol,
         target: ConeKotlinType,
         substitutor: ConeSubstitutor,
-        typeCheckerContext: AbstractTypeCheckerContext
+        typeSystemContext: ConeTypeContext
     ): Boolean {
-        var intersection = typeCheckerContext.intersectTypes(
-            prototypeSymbol.fir.bounds.filterIsInstance<FirResolvedTypeRef>().map { it.type }
+        var intersection = typeSystemContext.intersectTypes(
+            prototypeSymbol.fir.bounds.map { it.coneType }
         ).safeAs<ConeKotlinType>() ?: return true
 
         intersection = substitutor.substituteOrSelf(intersection)
-        return AbstractTypeChecker.isSubtypeOf(typeCheckerContext, target, intersection)
+        return AbstractTypeChecker.isSubtypeOf(typeSystemContext, target, intersection, stubTypesEqualToAnything = false)
     }
 
     private fun DiagnosticReporter.reportOn(

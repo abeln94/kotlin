@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.name.ClassId
 class FirTypeResolverImpl(private val session: FirSession) : FirTypeResolver() {
 
     private val symbolProvider by lazy {
-        session.firSymbolProvider
+        session.symbolProvider
     }
 
     private data class ClassIdInSession(val session: FirSession, val id: ClassId)
@@ -181,7 +181,7 @@ class FirTypeResolverImpl(private val session: FirSession) : FirTypeResolver() {
             }
             is FirFunctionTypeRef -> createFunctionalType(typeRef)
             is FirDynamicTypeRef -> ConeKotlinErrorType(ConeIntermediateDiagnostic("Not supported: ${typeRef::class.simpleName}"))
-            else -> error("!")
+            else -> error(typeRef.render())
         }
     }
 }

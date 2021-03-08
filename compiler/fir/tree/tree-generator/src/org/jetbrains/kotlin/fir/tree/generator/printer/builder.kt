@@ -7,6 +7,8 @@ package org.jetbrains.kotlin.fir.tree.generator.printer
 
 import org.jetbrains.kotlin.fir.tree.generator.declarationAttributesType
 import org.jetbrains.kotlin.fir.tree.generator.model.*
+import org.jetbrains.kotlin.util.SmartPrinter
+import org.jetbrains.kotlin.util.withIndent
 import java.io.File
 
 fun Builder.generateCode(generationPath: File): GeneratedFile {
@@ -154,7 +156,7 @@ private fun SmartPrinter.printFieldInBuilder(field: FieldWithDefault, builder: B
             println()
             withIndent {
                 println("get() = throw IllegalStateException()")
-                println("set(value) {")
+                println("set(_) {")
                 withIndent {
                     println("throw IllegalStateException()")
                 }

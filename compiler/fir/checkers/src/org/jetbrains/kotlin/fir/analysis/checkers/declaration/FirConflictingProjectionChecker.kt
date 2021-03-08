@@ -23,6 +23,10 @@ object FirConflictingProjectionChecker : FirBasicDeclarationChecker() {
         }
 
         if (declaration is FirTypedDeclaration) {
+            // The body of function contract is not fully resolved.
+            if (declaration.resolvePhase == FirResolvePhase.CONTRACTS) {
+                return
+            }
             checkTypeRef(declaration.returnTypeRef, context, reporter)
         }
 
@@ -44,8 +48,7 @@ object FirConflictingProjectionChecker : FirBasicDeclarationChecker() {
     }
 
     private fun checkTypeRef(typeRef: FirTypeRef, context: CheckerContext, reporter: DiagnosticReporter) {
-        val declaration = typeRef.safeAs<FirResolvedTypeRef>()
-            ?.coneTypeSafe<ConeClassLikeType>()
+        val declaration = typeRef.coneTypeSafe<ConeClassLikeType>()
             ?.lookupTag
             ?.toSymbol(context.session)
             ?.fir.safeAs<FirRegularClass>()

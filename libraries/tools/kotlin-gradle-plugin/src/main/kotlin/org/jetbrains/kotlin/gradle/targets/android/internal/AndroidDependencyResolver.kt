@@ -117,7 +117,10 @@ object AndroidDependencyResolver {
         return sourceSet2Impl.mapValues { entry ->
             val dependencies = findDependencies(allImplConfigs, entry.value.implConfig)
 
-            val selfResolved = dependencies.filterIsInstance<SelfResolvingDependency>().map { AndroidDependency(collection = it.resolve()) }
+            val selfResolved = dependencies.filterIsInstance<SelfResolvingDependency>().map { dependency ->
+                val collection = dependency.resolve().takeIf(Collection<File?>::isNotEmpty)
+                AndroidDependency(dependency.name, group = dependency.group, collection = collection)
+            }
             val resolvedExternal = dependencies.filterIsInstance<ExternalModuleDependency>()
                 .flatMap { collectDependencies(it.module, entry.value.compileConfig) }
 
@@ -126,11 +129,13 @@ object AndroidDependencyResolver {
             if (entry.key == "androidMain") {
                 // this is a terrible hack, but looks like the only way, other than proper support via light-classes
                 val task = project.tasks.findByName("processDebugResources")
-                getClassOrNull("com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask")?.let { linkAppClass ->
-                    @Suppress("UNCHECKED_CAST")
-                    val rClassOutputJar =
-                        linkAppClass.getMethodOrNull("getRClassOutputJar")?.invoke(task) as Provider<FileSystemLocation>?
-                    rClassOutputJar?.orNull?.asFile?.let { result += AndroidDependency("R.jar", it) }
+                if (task != null) {
+                    getClassOrNull("com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask")?.let { linkAppClass ->
+                        @Suppress("UNCHECKED_CAST")
+                        val rClassOutputJar =
+                            linkAppClass.getMethodOrNull("getRClassOutputJar")?.invoke(task) as Provider<FileSystemLocation>?
+                        rClassOutputJar?.orNull?.asFile?.let { result += AndroidDependency("R.jar", it) }
+                    }
                 }
             }
 
@@ -143,8 +148,13 @@ object AndroidDependencyResolver {
         module: ModuleIdentifier,
         compileClasspathConf: Configuration
     ): List<AndroidDependency> {
+        val processedJarArtifactType = try {
+            AndroidArtifacts.ArtifactType.valueOf("PROCESSED_JAR")
+        } catch (e: IllegalArgumentException) {
+            AndroidArtifacts.ArtifactType.JAR
+        }
         val viewConfig: (ArtifactView.ViewConfiguration) -> Unit = { config ->
-            config.attributes { it.attribute(AndroidArtifacts.ARTIFACT_TYPE, AndroidArtifacts.ArtifactType.JAR.type) }
+            config.attributes { it.attribute(AndroidArtifacts.ARTIFACT_TYPE, processedJarArtifactType.type) }
             config.isLenient = true
         }
 

@@ -100,6 +100,16 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultImpls.kt");
     }
 
+    @TestMetadata("defaultPackage.kt")
+    public void testDefaultPackage() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultPackage.kt");
+    }
+
+    @TestMetadata("defaultPackageCorrectErrorTypes.kt")
+    public void testDefaultPackageCorrectErrorTypes() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultPackageCorrectErrorTypes.kt");
+    }
+
     @TestMetadata("defaultParameterValueOff.kt")
     public void testDefaultParameterValueOff() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultParameterValueOff.kt");
@@ -108,6 +118,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("defaultParameterValueOn.kt")
     public void testDefaultParameterValueOn() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultParameterValueOn.kt");
+    }
+
+    @TestMetadata("delegateCorrectErrorTypes.kt")
+    public void testDelegateCorrectErrorTypes() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/delegateCorrectErrorTypes.kt");
     }
 
     @TestMetadata("deprecated.kt")
@@ -420,6 +435,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/primitiveTypes.kt");
     }
 
+    @TestMetadata("properties.kt")
+    public void testProperties() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/properties.kt");
+    }
+
     @TestMetadata("propertyAnnotations.kt")
     public void testPropertyAnnotations() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/propertyAnnotations.kt");
@@ -458,6 +478,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("stripMetadata.kt")
     public void testStripMetadata() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/stripMetadata.kt");
+    }
+
+    @TestMetadata("suspendArgName.kt")
+    public void testSuspendArgName() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/suspendArgName.kt");
     }
 
     @TestMetadata("suspendErrorTypes.kt")

@@ -14,10 +14,11 @@ import org.jetbrains.kotlin.fir.SessionConfiguration
 import org.jetbrains.kotlin.fir.backend.jvm.FirJvmTypeMapper
 import org.jetbrains.kotlin.fir.caches.FirCachesFactory
 import org.jetbrains.kotlin.fir.checkers.registerCommonCheckers
+import org.jetbrains.kotlin.fir.checkers.registerExtendedCommonCheckers
 import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
 import org.jetbrains.kotlin.fir.java.JavaSymbolProvider
 import org.jetbrains.kotlin.fir.java.deserialization.KotlinDeserializedJvmSymbolsProvider
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.impl.FirBuiltinSymbolProvider
@@ -57,6 +58,7 @@ internal object FirIdeSessionFactory {
         isRootModule: Boolean,
         librariesCache: LibrariesCache,
         languageVersionSettings: LanguageVersionSettings = LanguageVersionSettingsImpl.DEFAULT,
+        configureSession: (FirIdeSession.() -> Unit)? = null
     ): FirIdeSourcesSession {
         sessionsCache[moduleInfo]?.let { return it }
         val scopeProvider = KotlinScopeProvider(::wrapScopeWithJvmMapped)
@@ -107,8 +109,9 @@ internal object FirIdeSessionFactory {
                                 project,
                                 builtinsAndCloneableSession,
                                 builtinTypes,
-                                librariesCache
-                            ).firSymbolProvider
+                                librariesCache,
+                                configureSession = configureSession,
+                            ).symbolProvider
                         )
                         dependentModules
                             .mapTo(this) {
@@ -122,7 +125,8 @@ internal object FirIdeSessionFactory {
                                     sessionsCache,
                                     isRootModule = false,
                                     librariesCache,
-                                ).firSymbolProvider
+                                    configureSession = configureSession,
+                                ).symbolProvider
                             }
                     }
                 )
@@ -133,9 +137,11 @@ internal object FirIdeSessionFactory {
             registerJavaSpecificResolveComponents()
             FirSessionFactory.FirSessionConfigurator(this).apply {
                 if (isRootModule) {
-                    registerCommonCheckers()
+                    registerExtendedCommonCheckers()
                 }
             }.configure()
+
+            configureSession?.invoke(this)
         }
     }
 
@@ -146,6 +152,7 @@ internal object FirIdeSessionFactory {
         builtinTypes: BuiltinTypes,
         librariesCache: LibrariesCache,
         languageVersionSettings: LanguageVersionSettings = LanguageVersionSettingsImpl.DEFAULT,
+        configureSession: (FirIdeSession.() -> Unit)?,
     ): FirIdeLibrariesSession = librariesCache.cached(moduleInfo) {
         checkCanceled()
         val searchScope = ModuleLibrariesSearchScope(moduleInfo.module)
@@ -185,18 +192,20 @@ internal object FirIdeSessionFactory {
                             )
                         )
                         add(javaSymbolProvider)
-                        addAll((builtinsAndCloneableSession.firSymbolProvider as FirCompositeSymbolProvider).providers)
+                        addAll((builtinsAndCloneableSession.symbolProvider as FirCompositeSymbolProvider).providers)
                     }
                 )
             )
             register(FirJvmTypeMapper::class, FirJvmTypeMapper(this))
+            configureSession?.invoke(this)
         }
     }
 
     fun createBuiltinsAndCloneableSession(
         project: Project,
         builtinTypes: BuiltinTypes,
-        languageVersionSettings: LanguageVersionSettings = LanguageVersionSettingsImpl.DEFAULT
+        languageVersionSettings: LanguageVersionSettings = LanguageVersionSettingsImpl.DEFAULT,
+        configureSession: (FirIdeSession.() -> Unit)? = null,
     ): FirIdeBuiltinsAndCloneableSession {
         return FirIdeBuiltinsAndCloneableSession(project, builtinTypes).apply {
             registerIdeComponents()
@@ -214,6 +223,7 @@ internal object FirIdeSessionFactory {
                 )
             )
             register(FirJvmTypeMapper::class, FirJvmTypeMapper(this))
+            configureSession?.invoke(this)
         }
     }
 

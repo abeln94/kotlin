@@ -33,12 +33,6 @@ abstract class AbstractDiagnosticCollector(
     override val scopeSession: ScopeSession = ScopeSession(),
     returnTypeCalculator: ReturnTypeCalculator = ReturnTypeCalculatorForFullBodyResolve()
 ) : SessionHolder {
-    companion object {
-        private const val SUPPRESS_ALL_INFOS = "infos"
-        private const val SUPPRESS_ALL_WARNINGS = "warnings"
-        private const val SUPPRESS_ALL_ERRORS = "errors"
-    }
-
     fun collectDiagnostics(firFile: FirFile): List<FirDiagnostic<*>> {
         if (!componentsInitialized) {
             throw IllegalStateException("Components are not initialized")
@@ -58,7 +52,7 @@ abstract class AbstractDiagnosticCollector(
 
     @Suppress("LeakingThis")
     private var context = PersistentCheckerContext(this, returnTypeCalculator)
-    private var currentAction = DiagnosticCollectorDeclarationAction.CHECK_CURRENT_DECLARATION_AND_CHECK_NESTED
+    private var currentAction = DiagnosticCollectorDeclarationAction.CHECK_IN_CURRENT_DECLARATION_AND_LOOKUP_FOR_NESTED
 
     fun initializeComponents(vararg components: AbstractDiagnosticCollectorComponent) {
         if (componentsInitialized) {
@@ -68,13 +62,17 @@ abstract class AbstractDiagnosticCollector(
         componentsInitialized = true
     }
 
-    protected open fun beforeCollecting() {}
+    protected open fun beforeRunningAllComponentsOnElement(element: FirElement) {}
+    protected open fun beforeRunningSingleComponentOnElement(element: FirElement) {}
 
     private inner class Visitor : FirDefaultVisitor<Unit, Nothing?>() {
         private fun <T : FirElement> T.runComponents() {
-            components.forEach {
-                beforeCollecting()
-                this.accept(it, context)
+            if (currentAction.checkInCurrentDeclaration) {
+                beforeRunningAllComponentsOnElement(this)
+                components.forEach {
+                    beforeRunningSingleComponentOnElement(this)
+                    this.accept(it, context)
+                }
             }
         }
 
@@ -208,17 +206,23 @@ abstract class AbstractDiagnosticCollector(
             resolvedTypeRef.delegatedTypeRef?.accept(this, data)
         }
 
+        override fun visitFunctionCall(functionCall: FirFunctionCall, data: Nothing?) {
+            visitWithQualifiedAccess(functionCall)
+        }
+
+        override fun visitQualifiedAccessExpression(qualifiedAccessExpression: FirQualifiedAccessExpression, data: Nothing?) {
+            visitWithQualifiedAccess(qualifiedAccessExpression)
+        }
+
         private inline fun visitWithDeclaration(
             declaration: FirDeclaration,
             block: () -> Unit = { declaration.acceptChildren(this, null) }
         ) {
-            if (!currentAction.checkNested) return
+            if (!currentAction.lookupForNestedDeclaration) return
 
-            val action = onDeclarationEnter(declaration)
-            if (action.checkCurrentDeclaration) {
-                declaration.runComponents()
-            }
+            val action = getDeclarationActionOnDeclarationEnter(declaration)
             withDiagnosticsAction(action) {
+                declaration.runComponents()
                 withDeclaration(declaration) {
                     block()
                 }
@@ -237,10 +241,21 @@ abstract class AbstractDiagnosticCollector(
                 }
             }
         }
+
+        private fun visitWithQualifiedAccess(qualifiedAccess: FirQualifiedAccess) {
+            val existingContext = context
+            context = context.addQualifiedAccess(qualifiedAccess)
+            try {
+                qualifiedAccess.runComponents()
+                qualifiedAccess.acceptChildren(this, null)
+            } finally {
+                context = existingContext
+            }
+        }
     }
 
-    protected open fun onDeclarationEnter(declaration: FirDeclaration): DiagnosticCollectorDeclarationAction =
-        DiagnosticCollectorDeclarationAction.CHECK_CURRENT_DECLARATION_AND_CHECK_NESTED
+    protected open fun getDeclarationActionOnDeclarationEnter(declaration: FirDeclaration): DiagnosticCollectorDeclarationAction =
+        DiagnosticCollectorDeclarationAction.CHECK_IN_CURRENT_DECLARATION_AND_LOOKUP_FOR_NESTED
 
     protected open fun onDeclarationExit(declaration: FirDeclaration) {}
 
@@ -286,16 +301,7 @@ abstract class AbstractDiagnosticCollector(
     }
 
     private fun addSuppressedDiagnosticsToContext(annotationContainer: FirAnnotationContainer) {
-        val annotations = annotationContainer.annotations.filter {
-            val type = it.annotationTypeRef.coneType as? ConeClassLikeType ?: return@filter false
-            type.lookupTag.classId == StandardClassIds.Suppress
-        }
-        if (annotations.isEmpty()) return
-        val arguments = annotations.flatMap { annotationCall ->
-            annotationCall.arguments.filterIsInstance<FirVarargArgumentsExpression>().flatMap { varargArgument ->
-                varargArgument.arguments.mapNotNull { (it as? FirConstExpression<*>)?.value as? String? }
-            }
-        }
+        val arguments = getDiagnosticsSuppressedForContainer(annotationContainer) ?: return
         context = context.addSuppressedDiagnostics(
             arguments,
             allInfosSuppressed = SUPPRESS_ALL_INFOS in arguments,
@@ -313,13 +319,32 @@ abstract class AbstractDiagnosticCollector(
             currentAction = oldAction
         }
     }
+
+    companion object {
+        const val SUPPRESS_ALL_INFOS = "infos"
+        const val SUPPRESS_ALL_WARNINGS = "warnings"
+        const val SUPPRESS_ALL_ERRORS = "errors"
+
+        fun getDiagnosticsSuppressedForContainer(annotationContainer: FirAnnotationContainer): List<String>? {
+            val annotations = annotationContainer.annotations.filter {
+                val type = it.annotationTypeRef.coneType as? ConeClassLikeType ?: return@filter false
+                type.lookupTag.classId == StandardClassIds.Suppress
+            }
+            if (annotations.isEmpty()) return null
+            return annotations.flatMap { annotationCall ->
+                annotationCall.arguments.filterIsInstance<FirVarargArgumentsExpression>().flatMap { varargArgument ->
+                    varargArgument.arguments.mapNotNull { (it as? FirConstExpression<*>)?.value as? String? }
+                }
+            }
+        }
+    }
 }
 
-enum class DiagnosticCollectorDeclarationAction(val checkCurrentDeclaration: Boolean, val checkNested: Boolean) {
-    CHECK_CURRENT_DECLARATION_AND_CHECK_NESTED(checkCurrentDeclaration = true, checkNested = true),
-    CHECK_CURRENT_DECLARATION_AND_SKIP_NESTED(checkCurrentDeclaration = true, checkNested = false),
-    SKIP_CURRENT_DECLARATION_AND_CHECK_NESTED(checkCurrentDeclaration = false, checkNested = true),
-    SKIP(checkCurrentDeclaration = false, checkNested = false),
+enum class DiagnosticCollectorDeclarationAction(val checkInCurrentDeclaration: Boolean, val lookupForNestedDeclaration: Boolean) {
+    CHECK_IN_CURRENT_DECLARATION_AND_LOOKUP_FOR_NESTED(checkInCurrentDeclaration = true, lookupForNestedDeclaration = true),
+    CHECK_IN_CURRENT_DECLARATION_AND_DO_NOT_LOOKUP_FOR_NESTED(checkInCurrentDeclaration = true, lookupForNestedDeclaration = false),
+    DO_NOT_CHECK_IN_CURRENT_DECLARATION_AND_LOOKUP_FOR_NESTED(checkInCurrentDeclaration = false, lookupForNestedDeclaration = true),
+    SKIP(checkInCurrentDeclaration = false, lookupForNestedDeclaration = false),
 }
 
 fun AbstractDiagnosticCollector.registerAllComponents() {

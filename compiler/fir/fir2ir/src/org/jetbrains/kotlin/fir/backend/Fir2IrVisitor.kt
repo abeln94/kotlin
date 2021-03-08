@@ -67,7 +67,9 @@ class Fir2IrVisitor(
 
     override fun visitField(field: FirField, data: Any?): IrField {
         if (field.isSynthetic) {
-            return declarationStorage.getCachedIrField(field)!!
+            return declarationStorage.getCachedIrField(field)!!.apply {
+                memberGenerator.convertFieldContent(this, field)
+            }
         } else {
             throw AssertionError("Unexpected field: ${field.render()}")
         }
@@ -123,8 +125,7 @@ class Fir2IrVisitor(
         } else if (initializer is FirAnonymousObject) {
             // Otherwise, this is a default-ish enum entry, which doesn't need its own synthetic class.
             // During raw FIR building, we put the delegated constructor call inside an anonymous object.
-            val primaryConstructor = initializer.getPrimaryConstructorIfAny()
-            val delegatedConstructor = primaryConstructor?.delegatedConstructor
+            val delegatedConstructor = initializer.primaryConstructor?.delegatedConstructor
             if (delegatedConstructor != null) {
                 with(memberGenerator) {
                     irEnumEntry.initializerExpression = irFactory.createExpressionBody(
@@ -269,7 +270,7 @@ class Fir2IrVisitor(
     override fun visitProperty(property: FirProperty, data: Any?): IrElement {
         if (property.isLocal) return visitLocalVariable(property)
         val irProperty = declarationStorage.getCachedIrProperty(property)!!
-        return conversionScope.withProperty(irProperty) {
+        return conversionScope.withProperty(irProperty, property) {
             memberGenerator.convertPropertyContent(irProperty, property, containingClass = conversionScope.containerFirClass())
         }
     }

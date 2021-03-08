@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolv
 import org.jetbrains.kotlin.fir.resolve.bindSymbolToLookupTag
 import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.resolve.diagnostics.ConeUnresolvedReferenceError
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.getClassDeclaredPropertySymbols
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.expectedConeType
@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildErrorTypeRef
+import org.jetbrains.kotlin.fir.types.builder.buildImplicitTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
@@ -58,6 +59,14 @@ import java.util.*
 
 internal val JavaModifierListOwner.modality: Modality
     get() = when {
+        isAbstract -> Modality.ABSTRACT
+        isFinal -> Modality.FINAL
+        else -> Modality.OPEN
+    }
+
+internal val JavaClass.modality: Modality
+    get() = when {
+        isSealed -> Modality.SEALED
         isAbstract -> Modality.ABSTRACT
         isFinal -> Modality.FINAL
         else -> Modality.OPEN
@@ -385,7 +394,7 @@ private fun JavaClassifierType.toConeKotlinTypeForFlexibleBound(
                 )
             }
 
-            val classSymbol = session.firSymbolProvider.getClassLikeSymbolByFqName(classId) as? FirRegularClassSymbol
+            val classSymbol = session.symbolProvider.getClassLikeSymbolByFqName(classId) as? FirRegularClassSymbol
 
             val mappedTypeArguments = if (isRaw) {
                 val defaultArgs = (1..classifier.typeParameters.size).map { ConeStarProjection }
@@ -436,7 +445,7 @@ private fun FirRegularClass.createRawArguments(
 private fun buildEnumCall(session: FirSession, classId: ClassId?, entryName: Name?) =
     buildFunctionCall {
         val calleeReference = if (classId != null && entryName != null) {
-            session.firSymbolProvider.getClassDeclaredPropertySymbols(classId, entryName)
+            session.symbolProvider.getClassDeclaredPropertySymbols(classId, entryName)
                 .firstOrNull()?.let { propertySymbol ->
                     buildResolvedNamedReference {
                         name = entryName
@@ -503,7 +512,7 @@ private fun buildArgumentMapping(
     if (annotationArguments.none { it.name != null }) {
         return null
     }
-    val annotationClassSymbol = session.firSymbolProvider.getClassLikeSymbolByFqName(lookupTag.classId).also {
+    val annotationClassSymbol = session.symbolProvider.getClassLikeSymbolByFqName(lookupTag.classId).also {
         lookupTag.bindSymbolToLookupTag(session, it)
     } ?: return null
     val annotationConstructor =
@@ -511,7 +520,7 @@ private fun buildArgumentMapping(
     val mapping = annotationArguments.associateTo(linkedMapOf()) { argument ->
         val parameter = annotationConstructor.valueParameters.find { it.name == (argument.name ?: JavaSymbolProvider.VALUE_METHOD_NAME) }
             ?: return null
-        argument.toFirExpression(session, javaTypeParameterStack) to parameter
+        argument.toFirExpression(session, javaTypeParameterStack, parameter.returnTypeRef) to parameter
     }
     return buildResolvedArgumentList(mapping)
 }
@@ -547,7 +556,12 @@ internal fun JavaAnnotation.toFirAnnotationCall(
             null -> null
             else -> buildArgumentMapping(session, javaTypeParameterStack, lookupTag!!, arguments)
         } ?: buildArgumentList {
-            this@toFirAnnotationCall.arguments.mapTo(arguments) { it.toFirExpression(session, javaTypeParameterStack) }
+            this@toFirAnnotationCall.arguments.mapTo(arguments) {
+                val expectedArgumentType = buildErrorTypeRef {
+                    diagnostic = ConeSimpleDiagnostic("java annotation argument without expected type")
+                }
+                it.toFirExpression(session, javaTypeParameterStack, expectedArgumentType)
+            }
         }
         calleeReference = FirReferencePlaceholderForResolvedAnnotations
     }
@@ -616,14 +630,19 @@ private fun JavaType?.toConeProjectionWithoutEnhancement(
     }
 }
 
-private fun JavaAnnotationArgument.toFirExpression(
-    session: FirSession, javaTypeParameterStack: JavaTypeParameterStack
+internal fun JavaAnnotationArgument.toFirExpression(
+    session: FirSession, javaTypeParameterStack: JavaTypeParameterStack, expectedTypeRef: FirTypeRef
 ): FirExpression {
     return when (this) {
         is JavaLiteralAnnotationArgument -> value.createConstantOrError(session)
         is JavaArrayAnnotationArgument -> buildArrayOfCall {
+            typeRef = expectedTypeRef
+            val argumentTypeRef = buildResolvedTypeRef {
+                type = expectedTypeRef.coneTypeSafe<ConeKotlinType>()?.lowerBoundIfFlexible()?.arrayElementType()
+                    ?: ConeClassErrorType(ConeSimpleDiagnostic("expected type is not array type"))
+            }
             argumentList = buildArgumentList {
-                getElements().mapTo(arguments) { it.toFirExpression(session, javaTypeParameterStack) }
+                getElements().mapTo(arguments) { it.toFirExpression(session, javaTypeParameterStack, argumentTypeRef) }
             }
         }
         is JavaEnumValueAnnotationArgument -> buildEnumCall(session, enumClassId, entryName)

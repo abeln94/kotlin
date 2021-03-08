@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.gradle.internal.testing.TCServiceMessagesTestExecuto
 import org.jetbrains.kotlin.gradle.plugin.mpp.isAtLeast
 import org.jetbrains.kotlin.gradle.targets.native.internal.parseKotlinNativeStackTraceAsJvm
 import org.jetbrains.kotlin.gradle.tasks.KotlinTest
+import org.jetbrains.kotlin.gradle.utils.isConfigurationCacheAvailable
 import org.jetbrains.kotlin.konan.CompilerVersion
 import java.io.File
 import java.util.concurrent.Callable
@@ -32,6 +33,7 @@ abstract class KotlinNativeTest : KotlinTest() {
     @get:Internal
     val executableProperty: Property<FileCollection> = project.objects.property(FileCollection::class.java)
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFiles // use FileCollection & @InputFiles rather than @InputFile to allow for task dependencies built-into this FileCollection
     @get:SkipWhenEmpty
     @Suppress("UNUSED") // Gradle input
@@ -114,7 +116,11 @@ abstract class KotlinNativeTest : KotlinTest() {
             prependSuiteName = targetName != null,
             treatFailedTestOutputAsStacktrace = false,
             stackTraceParser = ::parseKotlinNativeStackTraceAsJvm,
-            escapeTCMessagesInLog = project.hasProperty(TC_PROJECT_PROPERTY)
+            escapeTCMessagesInLog = if (isConfigurationCacheAvailable(project.gradle)) {
+                project.providers.gradleProperty(TC_PROJECT_PROPERTY).forUseAtConfigurationTime().isPresent
+            } else {
+                project.hasProperty(TC_PROJECT_PROPERTY)
+            }
         )
 
         // The KotlinTest expects that the exit code is zero even if some tests failed.

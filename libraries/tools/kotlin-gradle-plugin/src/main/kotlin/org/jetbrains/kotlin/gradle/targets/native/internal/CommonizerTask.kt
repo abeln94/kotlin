@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.gradle.targets.native.internal
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.*
-import org.jetbrains.kotlin.compilerRunner.KotlinNativeKlibCommonizerToolRunner
+import org.jetbrains.kotlin.compilerRunner.KotlinNativeCommonizerToolRunner
 import org.jetbrains.kotlin.compilerRunner.konanHome
 import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 import org.jetbrains.kotlin.gradle.targets.native.internal.SuccessMarker.Companion.getSuccessMarker
@@ -24,7 +24,6 @@ import java.nio.file.*
 import java.nio.file.attribute.*
 import java.time.*
 import java.util.*
-import javax.inject.Inject
 
 internal const val COMMONIZER_TASK_NAME = "runCommonizer"
 
@@ -37,12 +36,14 @@ internal open class CommonizerTask : DefaultTask() {
     @get:Input
     var targetGroups: Set<KonanTargetGroup> = emptySet()
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputDirectory
     @Suppress("unused") // Only for up-to-date checker. The directory with the original common libs.
     val originalCommonLibrariesDirectory = konanHome
         .resolve(KONAN_DISTRIBUTION_KLIB_DIR)
         .resolve(KONAN_DISTRIBUTION_COMMON_LIBS_DIR)
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputDirectory
     @Suppress("unused") // Only for up-to-date checker. The directory with the original platform libs.
     val originalPlatformLibrariesDirectory = konanHome
@@ -53,6 +54,7 @@ internal open class CommonizerTask : DefaultTask() {
     val commonizerTargetOutputDirectories
         get() = targetGroups.map { targets -> project.nativeDistributionCommonizerOutputDirectory(targets) }
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFiles
     @Suppress("unused") // Only for up-to-date checker.
     val successMarkers
@@ -190,7 +192,7 @@ internal fun Project.createTempNativeDistributionCommonizerOutputDirectory(targe
 fun callCommonizerCLI(project: Project, commandLineArguments: List<String>) {
     if (commandLineArguments.isEmpty()) return
 
-    KotlinNativeKlibCommonizerToolRunner(project).run(commandLineArguments)
+    KotlinNativeCommonizerToolRunner(project).run(commandLineArguments)
 }
 
 private fun renameDirectory(source: File, destination: File) {

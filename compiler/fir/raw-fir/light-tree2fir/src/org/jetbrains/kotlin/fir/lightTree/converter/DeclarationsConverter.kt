@@ -37,14 +37,11 @@ import org.jetbrains.kotlin.fir.lightTree.fir.modifier.Modifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeModifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeParameterModifier
 import org.jetbrains.kotlin.fir.lightTree.fir.modifier.TypeProjectionModifier
-import org.jetbrains.kotlin.fir.references.builder.buildImplicitThisReference
-import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildSimpleNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirReferencePlaceholderForResolvedAnnotations
 import org.jetbrains.kotlin.fir.scopes.FirScopeProvider
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
-import org.jetbrains.kotlin.fir.symbols.CallableId
-import org.jetbrains.kotlin.fir.symbols.LocalCallableIdConstructor
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.LocalCallableIdConstructor
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.*
@@ -432,10 +429,9 @@ class DeclarationsConverter(
                     val selfType = classNode.toDelegatedSelfType(this)
                     registerSelfType(selfType)
 
-                    val delegationSpecifiers = superTypeList?.let { convertDelegationSpecifiers(it, symbol, selfType) }
+                    val delegationSpecifiers = superTypeList?.let { convertDelegationSpecifiers(it) }
                     var delegatedSuperTypeRef: FirTypeRef? = delegationSpecifiers?.delegatedSuperTypeRef
                     val delegatedConstructorSource: FirLightSourceElement? = delegationSpecifiers?.delegatedConstructorSource
-                    delegationSpecifiers?.delegateFields?.map { declarations += it }
 
                     val superTypeCallEntry = delegationSpecifiers?.delegatedConstructorArguments.orEmpty()
                     val superTypeRefs = mutableListOf<FirTypeRef>()
@@ -479,11 +475,11 @@ class DeclarationsConverter(
                     )
                     //parse primary constructor
                     val primaryConstructorWrapper = convertPrimaryConstructor(
-                        primaryConstructor, selfType.source, classWrapper, delegatedConstructorSource,
-                        delegationSpecifiers?.primaryConstructorBody
+                        primaryConstructor, selfType.source, classWrapper, delegatedConstructorSource
                     )
                     val firPrimaryConstructor = primaryConstructorWrapper?.firConstructor
                     firPrimaryConstructor?.let { declarations += it }
+                    delegationSpecifiers?.delegateFields?.map { declarations += it }
 
                     val properties = mutableListOf<FirProperty>()
                     if (primaryConstructor != null && firPrimaryConstructor != null) {
@@ -558,19 +554,17 @@ class DeclarationsConverter(
                 var classBody: LighterASTNode? = null
                 var delegatedConstructorSource: FirLightSourceElement? = null
                 var delegateFields: List<FirField>? = null
-                var primaryConstructorBody: FirBlock? = null
 
                 objectLiteral.getChildNodesByType(OBJECT_DECLARATION).first().forEachChildren {
                     when (it.tokenType) {
                         MODIFIER_LIST -> modifiers = convertModifierList(it)
                         PRIMARY_CONSTRUCTOR -> primaryConstructor = it
-                        SUPER_TYPE_LIST -> convertDelegationSpecifiers(it, symbol, delegatedSelfType).let {
-                            delegatedSuperTypeRef = it.delegatedSuperTypeRef
-                            superTypeRefs += it.superTypesRef
-                            superTypeCallEntry += it.delegatedConstructorArguments
-                            delegatedConstructorSource = it.delegatedConstructorSource
-                            delegateFields = it.delegateFields
-                            primaryConstructorBody = it.primaryConstructorBody
+                        SUPER_TYPE_LIST -> convertDelegationSpecifiers(it).let { specifiers ->
+                            delegatedSuperTypeRef = specifiers.delegatedSuperTypeRef
+                            superTypeRefs += specifiers.superTypesRef
+                            superTypeCallEntry += specifiers.delegatedConstructorArguments
+                            delegatedConstructorSource = specifiers.delegatedConstructorSource
+                            delegateFields = specifiers.delegateFields
                         }
                         CLASS_BODY -> classBody = it
                     }
@@ -586,7 +580,6 @@ class DeclarationsConverter(
                 this.superTypeRefs += superTypeRefs
                 typeRef = delegatedSelfType
 
-                delegateFields?.map { this.declarations += it }
                 val classWrapper = ClassWrapper(
                     SpecialNames.NO_NAME_PROVIDED, modifiers, ClassKind.OBJECT, this,
                     hasPrimaryConstructor = false,
@@ -597,8 +590,10 @@ class DeclarationsConverter(
                     superTypeCallEntry = superTypeCallEntry
                 )
                 //parse primary constructor
-                convertPrimaryConstructor(primaryConstructor, typeRef.source, classWrapper, delegatedConstructorSource, primaryConstructorBody)
-                    ?.let { this.declarations += it.firConstructor }
+                convertPrimaryConstructor(
+                    primaryConstructor, typeRef.source, classWrapper, delegatedConstructorSource
+                )?.let { this.declarations += it.firConstructor }
+                delegateFields?.let { this.declarations += it }
 
                 //parse declarations
                 classBody?.let {
@@ -724,7 +719,6 @@ class DeclarationsConverter(
         selfTypeSource: FirSourceElement?,
         classWrapper: ClassWrapper,
         delegatedConstructorSource: FirLightSourceElement?,
-        body: FirBlock? = null
     ): PrimaryConstructor? {
         if (primaryConstructor == null && !classWrapper.isEnumEntry() && classWrapper.hasSecondaryConstructor) return null
         if (classWrapper.isInterface()) return null
@@ -746,7 +740,9 @@ class DeclarationsConverter(
             extractArgumentsFrom(classWrapper.superTypeCallEntry, stubMode)
         }
 
-        val explicitVisibility = if (primaryConstructor != null) modifiers.getVisibility() else null
+        val explicitVisibility = runIf(primaryConstructor != null) {
+            modifiers.getVisibility().takeUnless { it == Visibilities.Unknown }
+        }
         val status = FirDeclarationStatusImpl(explicitVisibility ?: defaultVisibility, Modality.FINAL).apply {
             isExpect = modifiers.hasExpect() || classWrapper.hasExpect()
             isActual = modifiers.hasActual()
@@ -768,7 +764,7 @@ class DeclarationsConverter(
                 typeParameters += constructorTypeParametersFromConstructedClass(classWrapper.classBuilder.typeParameters)
                 this.valueParameters += valueParameters.map { it.firValueParameter }
                 delegatedConstructor = firDelegatedCall
-                this.body = body
+                this.body = null
             }.apply {
                 containingClassAttr = currentDispatchReceiverType()!!.lookupTag
             }, valueParameters
@@ -1021,16 +1017,16 @@ class DeclarationsConverter(
                                 it.containingClassAttr = lookupTag
                             }
                         }
-                    this.setter =
-                        if (isVar) {
-                            convertedAccessors.find { it.isSetter }
-                                ?: FirDefaultPropertySetter(
-                                    null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
-                                ).also {
-                                    currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
-                                        it.containingClassAttr = lookupTag
-                                    }
+                    // NOTE: We still need the setter even for a val property so we can report errors (e.g., VAL_WITH_SETTER).
+                    this.setter = convertedAccessors.find { it.isSetter }
+                        ?: if (isVar) {
+                            FirDefaultPropertySetter(
+                                null, session, FirDeclarationOrigin.Source, returnType, propertyVisibility
+                            ).also {
+                                currentDispatchReceiverType()?.lookupTag?.let { lookupTag ->
+                                    it.containingClassAttr = lookupTag
                                 }
+                            }
                         } else null
 
                     // Upward propagation of `inline` and `external` modifiers (from accessors to property)
@@ -1155,7 +1151,7 @@ class DeclarationsConverter(
         }
         val status =
             // Downward propagation of `inline` and `external` modifiers (from property to its accessors)
-            FirDeclarationStatusImpl(accessorVisibility, Modality.FINAL).apply {
+            FirDeclarationStatusImpl(accessorVisibility, modifiers.getModality()).apply {
                 isInline = propertyModifiers.hasInline() || modifiers.hasInline()
                 isExternal = propertyModifiers.hasExternal() || modifiers.hasExternal()
             }
@@ -1437,21 +1433,14 @@ class DeclarationsConverter(
         val delegatedConstructorArguments: List<FirExpression>,
         val delegatedConstructorSource: FirLightSourceElement?,
         val delegateFields: List<FirField>,
-        val primaryConstructorBody: FirBlock?
     )
 
-    private fun convertDelegationSpecifiers(
-        delegationSpecifiers: LighterASTNode,
-        containerSymbol: AbstractFirBasedSymbol<*>,
-        delegatedTypeRef: FirTypeRef
-    ): DelegationSpecifiers {
+    private fun convertDelegationSpecifiers(delegationSpecifiers: LighterASTNode): DelegationSpecifiers {
         val superTypeRefs = mutableListOf<FirTypeRef>()
         val superTypeCallEntry = mutableListOf<FirExpression>()
         var delegatedSuperTypeRef: FirTypeRef? = null
         var delegateConstructorSource: FirLightSourceElement? = null
         val delegateFields = mutableListOf<FirField>()
-        val initializeDelegateStatements = mutableListOf<FirStatement>()
-        var delegateNumber = 0
         delegationSpecifiers.forEachChildren {
             when (it.tokenType) {
                 SUPER_TYPE_ENTRY -> {
@@ -1464,28 +1453,12 @@ class DeclarationsConverter(
                     delegateConstructorSource = it.toFirSourceElement(FirFakeSourceElementKind.DelegatingConstructorCall)
                 }
                 DELEGATED_SUPER_TYPE_ENTRY -> {
-                    superTypeRefs += convertExplicitDelegation(
-                        it,
-                        delegateNumber,
-                        delegateFields,
-                        initializeDelegateStatements,
-                        containerSymbol,
-                        delegatedTypeRef
-                    )
-                    delegateNumber++
+                    superTypeRefs += convertExplicitDelegation(it, delegateFields)
                 }
             }
         }
-        val body = if (initializeDelegateStatements.isNotEmpty()) {
-            buildBlock {
-                for (statement in initializeDelegateStatements) {
-                    statements += statement
-                }
-            }
-        } else null
         return DelegationSpecifiers(
-            delegatedSuperTypeRef, superTypeRefs, superTypeCallEntry, delegateConstructorSource,
-            delegateFields, body
+            delegatedSuperTypeRef, superTypeRefs, superTypeCallEntry, delegateConstructorSource, delegateFields
         )
     }
 
@@ -1515,14 +1488,7 @@ class DeclarationsConverter(
      *   : userType "by" element
      *   ;
      */
-    private fun convertExplicitDelegation(
-        explicitDelegation: LighterASTNode,
-        delegateNumber: Int,
-        delegateFields: MutableList<FirField>,
-        initializeDelegateStatements: MutableList<FirStatement>,
-        containerSymbol: AbstractFirBasedSymbol<*>,
-        delegatedSelfTypeRef: FirTypeRef
-    ): FirTypeRef {
+    private fun convertExplicitDelegation(explicitDelegation: LighterASTNode, delegateFields: MutableList<FirField>): FirTypeRef {
         lateinit var firTypeRef: FirTypeRef
         var firExpression: FirExpression? = buildErrorExpression(
             explicitDelegation.toFirSourceElement(), ConeSimpleDiagnostic("Should have delegate", DiagnosticKind.Syntax)
@@ -1534,7 +1500,7 @@ class DeclarationsConverter(
             }
         }
 
-        val delegateName = Name.special("<\$\$delegate_$delegateNumber>")
+        val delegateName = Name.special("<\$\$delegate_${delegateFields.size}>")
         delegateFields.add(
             buildField {
                 source = firExpression!!.source
@@ -1545,24 +1511,7 @@ class DeclarationsConverter(
                 symbol = FirFieldSymbol(@OptIn(LocalCallableIdConstructor::class) CallableId(name))
                 isVar = false
                 status = FirDeclarationStatusImpl(Visibilities.Local, Modality.FINAL)
-            }
-        )
-        initializeDelegateStatements.add(
-            buildVariableAssignment {
-                source = firExpression!!.source
-                calleeReference =
-                    buildResolvedNamedReference {
-                        name = delegateName
-                        resolvedSymbol = delegateFields[delegateNumber].symbol
-                    }
-                rValue = firExpression!!
-                dispatchReceiver = buildThisReceiverExpression {
-                    source = firExpression!!.source
-                    calleeReference = buildImplicitThisReference {
-                        boundSymbol = containerSymbol
-                    }
-                    typeRef = delegatedSelfTypeRef
-                }
+                initializer = firExpression
             }
         )
         return firTypeRef

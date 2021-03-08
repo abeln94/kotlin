@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
 import org.jetbrains.kotlin.fir.FirRenderer
 import org.jetbrains.kotlin.fir.createSession
 import org.jetbrains.kotlin.fir.java.declarations.FirJavaClass
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.impl.FirCompositeSymbolProvider
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -65,9 +65,6 @@ abstract class AbstractFirTypeEnhancementTest : KtUsefulTestCase() {
 
     private fun createEnvironment(content: String): KotlinCoreEnvironment {
         val classpath = mutableListOf(getAnnotationsJar(), ForTestCompileRuntime.runtimeJarForTests())
-        if (InTextDirectivesUtils.isDirectiveDefined(content, "ANDROID_ANNOTATIONS")) {
-            classpath.add(ForTestCompileRuntime.androidAnnotationsForTests())
-        }
         if (InTextDirectivesUtils.isDirectiveDefined(content, "JVM_ANNOTATIONS")) {
             classpath.add(ForTestCompileRuntime.jvmAnnotationsForTests())
         }
@@ -140,7 +137,7 @@ abstract class AbstractFirTypeEnhancementTest : KtUsefulTestCase() {
 
         val javaFirDump = StringBuilder().also { builder ->
             val renderer = FirRenderer(builder)
-            val symbolProvider = session.firSymbolProvider as FirCompositeSymbolProvider
+            val symbolProvider = session.symbolProvider as FirCompositeSymbolProvider
             val javaProvider = symbolProvider.providers.filterIsInstance<JavaSymbolProvider>().first()
 
             val topLevelJavaClasses = topPsiClasses.map { it.classId(FqName.ROOT) }

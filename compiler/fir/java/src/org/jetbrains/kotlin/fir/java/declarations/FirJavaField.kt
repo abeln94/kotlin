@@ -141,6 +141,9 @@ class FirJavaField @FirImplementationDetail constructor(
     override fun <D> transformDelegate(transformer: FirTransformer<D>, data: D): FirField {
         return this
     }
+
+    override fun replaceSource(newSource: FirSourceElement?) {
+    }
 }
 
 @FirBuilderDsl
@@ -148,7 +151,6 @@ internal class FirJavaFieldBuilder : FirFieldBuilder() {
     var modality: Modality? = null
     lateinit var visibility: Visibility
     var isStatic: Boolean by Delegates.notNull()
-    var initializer: FirExpression? = null
     lateinit var annotationBuilder: () -> List<FirAnnotationCall>
 
     override var resolvePhase: FirResolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES

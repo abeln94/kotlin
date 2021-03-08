@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.backend.common.output.OutputFile;
 import org.jetbrains.kotlin.backend.common.output.OutputFileCollection;
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity;
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector;
 import org.jetbrains.kotlin.cli.common.modules.ModuleChunk;
 import org.jetbrains.kotlin.cli.common.modules.ModuleXmlParser;
@@ -33,7 +34,8 @@ import org.jetbrains.kotlin.utils.ExceptionUtilsKt;
 import org.jetbrains.kotlin.utils.PathUtil;
 
 import java.io.*;
-import java.util.*;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.jar.*;
 
 import static org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.ERROR;
@@ -103,16 +105,26 @@ public class CompileEnvironmentUtil {
     }
 
     public static void writeToJar(
-            File jarPath, boolean jarRuntime, boolean noReflect, boolean resetJarTimestamps, FqName mainClass, OutputFileCollection outputFiles
+            File jarPath,
+            boolean jarRuntime,
+            boolean noReflect,
+            boolean resetJarTimestamps,
+            FqName mainClass,
+            OutputFileCollection outputFiles,
+            MessageCollector messageCollector
     ) {
         FileOutputStream outputStream = null;
         try {
+            // we should try to create the output dir first
+            if (jarPath.getParentFile() != null) {
+                jarPath.getParentFile().mkdirs();
+            }
             outputStream = new FileOutputStream(jarPath);
             doWriteToJar(outputFiles, outputStream, mainClass, jarRuntime, noReflect, resetJarTimestamps);
             outputStream.close();
         }
         catch (FileNotFoundException e) {
-            throw new CompileEnvironmentException("Invalid jar path " + jarPath, e);
+            messageCollector.report(CompilerMessageSeverity.ERROR, "Invalid jar path: " + jarPath, null);
         }
         catch (IOException e) {
             throw ExceptionUtilsKt.rethrow(e);
@@ -144,11 +156,13 @@ public class CompileEnvironmentUtil {
                 JarEntry e = jis.getNextJarEntry();
                 if (e == null) break;
 
-                if ((!FileUtilRt.extensionEquals(e.getName(), "class") &&
-                     !FileUtilRt.extensionEquals(e.getName(), BuiltInSerializerProtocol.BUILTINS_FILE_EXTENSION)) ||
-                    StringsKt.substringAfterLast(e.getName(), "/", e.getName()).equals("module-info.class")) {
+                String name = e.getName();
+                if (!FileUtilRt.extensionEquals(name, "class") &&
+                    !FileUtilRt.extensionEquals(name, BuiltInSerializerProtocol.BUILTINS_FILE_EXTENSION) &&
+                    !name.startsWith("META-INF/services/")) {
                     continue;
                 }
+                if (StringsKt.substringAfterLast(name, "/", name).equals("module-info.class")) continue;
                 if (resetJarTimestamps) {
                     e.setTime(DOS_EPOCH);
                 }

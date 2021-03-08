@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.analysis.diagnostics
 
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.diagnostics.WhenMissingCase
 import org.jetbrains.kotlin.diagnostics.rendering.Renderer
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirRenderer
@@ -31,7 +32,7 @@ object FirDiagnosticRenderers {
     }
 
     val SYMBOLS = Renderer { symbols: Collection<AbstractFirBasedSymbol<*>> ->
-        symbols.joinToString(prefix = "[", postfix = "]", separator = ",", limit = 3, truncated = "...") { symbol ->
+        symbols.joinToString(prefix = "[", postfix = "]", separator = ", ", limit = 3, truncated = "...") { symbol ->
             SYMBOL.render(symbol)
         }
     }
@@ -86,6 +87,18 @@ object FirDiagnosticRenderers {
     val AMBIGUOUS_CALLS = Renderer { candidates: Collection<AbstractFirBasedSymbol<*>> ->
         candidates.joinToString(separator = "\n", prefix = "\n") { symbol ->
             SYMBOL.render(symbol)
+        }
+    }
+
+    private const val WHEN_MISSING_LIMIT = 7
+
+    val WHEN_MISSING_CASES = Renderer { missingCases: List<WhenMissingCase> ->
+        if (missingCases.firstOrNull() == WhenMissingCase.Unknown) {
+            "'else' branch"
+        } else {
+            val list = missingCases.joinToString(", ", limit = WHEN_MISSING_LIMIT) { "'$it'" }
+            val branches = if (missingCases.size > 1) "branches" else "branch"
+            "$list $branches or 'else' branch instead"
         }
     }
 }

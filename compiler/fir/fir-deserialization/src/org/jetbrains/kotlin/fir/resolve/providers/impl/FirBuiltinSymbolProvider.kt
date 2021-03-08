@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProviderInternals
 import org.jetbrains.kotlin.fir.scopes.KotlinScopeProvider
-import org.jetbrains.kotlin.fir.symbols.CallableId
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
@@ -220,7 +220,7 @@ class FirBuiltinSymbolProvider(session: FirSession, val kotlinScopeProvider: Kot
                                         isVararg = false
                                     }
                                 }
-                                dispatchReceiverType = classId.defaultType(typeParameters.map { it.symbol })
+                                dispatchReceiverType = classId.defaultType(this@klass.typeParameters.map { it.symbol })
                             }
                         )
                     }
@@ -303,6 +303,7 @@ class FirBuiltinSymbolProvider(session: FirSession, val kotlinScopeProvider: Kot
                     classId, classProto, symbol, nameResolver, session,
                     null, kotlinScopeProvider, parentContext,
                     null,
+                    origin = FirDeclarationOrigin.BuiltIns,
                     this::findAndDeserializeClass,
                 )
             }

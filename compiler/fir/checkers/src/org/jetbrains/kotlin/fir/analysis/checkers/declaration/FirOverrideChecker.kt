@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.analysis.checkers.declaration
 
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
@@ -26,8 +27,8 @@ import org.jetbrains.kotlin.types.AbstractTypeCheckerContext
 import org.jetbrains.kotlin.utils.addToStdlib.min
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-object FirOverrideChecker : FirRegularClassChecker() {
-    override fun check(declaration: FirRegularClass, context: CheckerContext, reporter: DiagnosticReporter) {
+object FirOverrideChecker : FirClassChecker() {
+    override fun check(declaration: FirClass<*>, context: CheckerContext, reporter: DiagnosticReporter) {
         val typeCheckerContext = context.session.typeContext.newBaseTypeCheckerContext(
             errorTypesEqualToAnything = false,
             stubTypesEqualToAnything = false
@@ -61,13 +62,13 @@ object FirOverrideChecker : FirRegularClassChecker() {
 
     private fun ConeKotlinType.substituteAllTypeParameters(
         overrideDeclaration: FirCallableMemberDeclaration<*>,
-        baseDeclarationSymbol: FirCallableSymbol<*>,
+        baseDeclaration: FirCallableDeclaration<*>,
     ): ConeKotlinType {
         if (overrideDeclaration.typeParameters.isEmpty()) {
             return this
         }
 
-        val parametersOwner = baseDeclarationSymbol.fir.safeAs<FirTypeParametersOwner>()
+        val parametersOwner = baseDeclaration.safeAs<FirTypeParametersOwner>()
             ?: return this
 
         val map = mutableMapOf<FirTypeParameterSymbol, ConeKotlinType>()
@@ -114,14 +115,13 @@ object FirOverrideChecker : FirRegularClassChecker() {
             it to (it.fir as FirMemberDeclaration).visibility
         }.sortedBy { pair ->
             // Regard `null` compare as Int.MIN so that we can report CANNOT_CHANGE_... first deterministically
-            visibility.compareTo(pair.second) ?: Int.MIN_VALUE
+            Visibilities.compare(visibility, pair.second) ?: Int.MIN_VALUE
         }
 
         for ((overridden, overriddenVisibility) in visibilities) {
-            val compare = visibility.compareTo(overriddenVisibility)
+            val compare = Visibilities.compare(visibility, overriddenVisibility)
             if (compare == null) {
-                // TODO: not ready yet (even after determinism massage), e.g., a Kotlin class that extends a Java class
-                // reporter.reportCannotChangeAccessPrivilege(this, overridden.fir)
+                reporter.reportCannotChangeAccessPrivilege(this, overridden.fir, context)
                 return
             } else if (compare < 0) {
                 reporter.reportCannotWeakenAccessPrivilege(this, overridden.fir, context)
@@ -130,27 +130,34 @@ object FirOverrideChecker : FirRegularClassChecker() {
         }
     }
 
+    // See [OverrideResolver#isReturnTypeOkForOverride]
     private fun FirCallableMemberDeclaration<*>.checkReturnType(
         overriddenSymbols: List<FirCallableSymbol<*>>,
         typeCheckerContext: AbstractTypeCheckerContext,
         context: CheckerContext,
     ): FirMemberDeclaration? {
-        val returnType = returnTypeRef.safeAs<FirResolvedTypeRef>()?.type
-            ?: return null
+        val overridingReturnType = returnTypeRef.coneType
 
         // Don't report *_ON_OVERRIDE diagnostics according to an error return type. That should be reported separately.
-        if (returnType is ConeKotlinErrorType) {
+        if (overridingReturnType is ConeKotlinErrorType) {
             return null
         }
 
         val bounds = overriddenSymbols.map { context.returnTypeCalculator.tryCalculateReturnType(it.fir).coneType.upperBoundIfFlexible() }
 
         for (it in bounds.indices) {
-            val restriction = bounds[it]
-                .substituteAllTypeParameters(this, overriddenSymbols[it])
+            val overriddenDeclaration = overriddenSymbols[it].fir
 
-            if (!AbstractTypeChecker.isSubtypeOf(typeCheckerContext, returnType, restriction)) {
-                return overriddenSymbols[it].fir.safeAs()
+            val overriddenReturnType = bounds[it].substituteAllTypeParameters(this, overriddenDeclaration)
+
+            val isReturnTypeOkForOverride =
+                if (overriddenDeclaration is FirProperty && overriddenDeclaration.isVar)
+                    AbstractTypeChecker.equalTypes(typeCheckerContext, overridingReturnType, overriddenReturnType)
+                else
+                    AbstractTypeChecker.isSubtypeOf(typeCheckerContext, overridingReturnType, overriddenReturnType)
+
+            if (!isReturnTypeOkForOverride) {
+                return overriddenDeclaration.safeAs()
             }
         }
 
@@ -235,6 +242,7 @@ object FirOverrideChecker : FirRegularClassChecker() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER") // TODO: delete me after implementing body
     private fun DiagnosticReporter.reportNothingToOverride(declaration: FirMemberDeclaration, context: CheckerContext) {
         // TODO: not ready yet, e.g., Collections
         // reportOn(declaration.source, FirErrors.NOTHING_TO_OVERRIDE, declaration, context)

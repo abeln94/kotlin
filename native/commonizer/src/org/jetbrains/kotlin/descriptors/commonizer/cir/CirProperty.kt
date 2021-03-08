@@ -5,8 +5,6 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.cir
 
-import org.jetbrains.kotlin.resolve.constants.ConstantValue
-
 interface CirProperty : CirFunctionOrProperty, CirLiftedUpDeclaration {
     val isExternal: Boolean
     val isVar: Boolean
@@ -15,7 +13,7 @@ interface CirProperty : CirFunctionOrProperty, CirLiftedUpDeclaration {
     val isDelegate: Boolean
     val getter: CirPropertyGetter?
     val setter: CirPropertySetter?
-    val backingFieldAnnotations: List<CirAnnotation>? // null assumes no backing field
-    val delegateFieldAnnotations: List<CirAnnotation>? // null assumes no backing field
-    val compileTimeInitializer: ConstantValue<*>?
+    val backingFieldAnnotations: List<CirAnnotation>
+    val delegateFieldAnnotations: List<CirAnnotation>
+    val compileTimeInitializer: CirConstantValue<*>
 }

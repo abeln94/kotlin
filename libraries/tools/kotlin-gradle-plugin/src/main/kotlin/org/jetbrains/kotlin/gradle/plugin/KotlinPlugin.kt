@@ -354,27 +354,6 @@ internal class KotlinJsIrSourceSetProcessor(
             val subpluginEnvironment: SubpluginEnvironment = SubpluginEnvironment.loadSubplugins(project, kotlinPluginVersion)
             subpluginEnvironment.addSubpluginOptions(project, kotlinCompilation)
         }
-
-        // outputFile can be set later during the configuration phase, get it only after the phase:
-        project.runOnceAfterEvaluated("KotlinJsIrSourceSetProcessor.doTargetSpecificProcessing", kotlinTask) {
-            val kotlinTaskInstance = kotlinTask.get()
-            val kotlinOptions = kotlinTaskInstance.kotlinOptions
-            kotlinOptions.outputFile = kotlinTaskInstance.outputFile.absolutePath
-            val outputDir = if (kotlinOptions.isProduceUnzippedKlib())
-                kotlinTaskInstance.outputFile
-            else
-                kotlinTaskInstance.outputFile.parentFile
-
-            if (outputDir.isParentOf(project.rootDir))
-                throw InvalidUserDataException(
-                    "The output directory '$outputDir' (defined by outputFile of $kotlinTaskInstance) contains or " +
-                            "matches the project root directory '${project.rootDir}'.\n" +
-                            "Gradle will not be able to build the project because of the root directory lock.\n" +
-                            "To fix this, consider using the default outputFile location instead of providing it explicitly."
-                )
-
-            kotlinTaskInstance.destinationDir = outputDir
-        }
     }
 }
 
@@ -477,7 +456,7 @@ internal abstract class AbstractKotlinPlugin(
                 }
             }
 
-            // Setup conf2ScopeMappings so that the API dependencies are wriiten with the compile scope in the POMs in case of 'java' plugin
+            // Setup conf2ScopeMappings so that the API dependencies are written with the compile scope in the POMs in case of 'java' plugin
             project.convention.getPlugin(MavenPluginConvention::class.java)
                 .conf2ScopeMappings.addMapping(0, project.configurations.getByName("api"), Conf2ScopeMappingContainer.COMPILE)
         }

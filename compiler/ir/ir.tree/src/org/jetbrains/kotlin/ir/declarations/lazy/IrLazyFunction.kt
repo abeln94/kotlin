@@ -34,7 +34,7 @@ class IrLazyFunction(
     override var visibility: DescriptorVisibility,
     override val modality: Modality,
     override val isInline: Boolean,
-    override var isExternal: Boolean,
+    override val isExternal: Boolean,
     override val isTailrec: Boolean,
     override val isSuspend: Boolean,
     override val isExpect: Boolean,
@@ -44,10 +44,6 @@ class IrLazyFunction(
     override val stubGenerator: DeclarationStubGenerator,
     override val typeTranslator: TypeTranslator,
 ) : IrSimpleFunction(), IrLazyFunctionBase {
-    init {
-        @Suppress("UNUSED_VARIABLE") val x = 1
-    }
-
     override var parent: IrDeclarationParent by createLazyParent()
 
     override var annotations: List<IrConstructorCall> by createLazyAnnotations()

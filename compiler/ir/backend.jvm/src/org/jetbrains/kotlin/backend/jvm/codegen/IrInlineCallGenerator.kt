@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.psi.PsiSourceManager
 import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
 import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.ir.descriptors.toIrBasedDescriptor
@@ -18,8 +19,8 @@ interface IrInlineCallGenerator : IrCallGenerator {
         expression: IrFunctionAccessExpression,
         isInsideIfCondition: Boolean,
     ) {
-        val element = codegen.context.psiSourceManager.findPsiElement(expression, codegen.irFunction)
-            ?: codegen.context.psiSourceManager.findPsiElement(codegen.irFunction)
+        val element = PsiSourceManager.findPsiElement(expression, codegen.irFunction)
+            ?: PsiSourceManager.findPsiElement(codegen.irFunction)
         if (!codegen.state.globalInlineContext.enterIntoInlining(
                 expression.symbol.owner.suspendFunctionOriginal().toIrBasedDescriptor(), element)
         ) {

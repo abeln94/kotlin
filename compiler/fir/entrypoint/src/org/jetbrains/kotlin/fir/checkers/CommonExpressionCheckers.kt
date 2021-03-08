@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.fir.analysis.checkers.expression.*
 object CommonExpressionCheckers : ExpressionCheckers() {
     override val basicExpressionCheckers: Set<FirBasicExpressionChecker> = setOf(
         FirAnonymousFunctionChecker,
+        FirGetClassCallChecker,
     )
 
     override val qualifiedAccessCheckers: Set<FirQualifiedAccessChecker> = setOf(
@@ -27,5 +28,9 @@ object CommonExpressionCheckers : ExpressionCheckers() {
 
     override val tryExpressionCheckers: Set<FirTryExpressionChecker> = setOf(
         FirCatchParameterChecker
+    )
+
+    override val whenExpressionCheckers: Set<FirWhenExpressionChecker> = setOf(
+        FirExhaustiveWhenChecker
     )
 }

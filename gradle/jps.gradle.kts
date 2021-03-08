@@ -65,7 +65,7 @@ fun setupFirRunConfiguration() {
 
     val junit = JUnit("_stub").apply { configureForKotlin("2048m") }
     junit.moduleName = "kotlin.compiler.fir.fir2ir.test"
-    junit.pattern = """^.*\.Fir\w+TestGenerated$"""
+    junit.pattern = """^.*\.Fir\w+Test\w*Generated$"""
     junit.vmParameters = junit.vmParameters.replace(rootDir.absolutePath, "\$PROJECT_DIR\$")
     junit.workingDirectory = junit.workingDirectory.replace(rootDir.absolutePath, "\$PROJECT_DIR\$")
 
@@ -76,7 +76,7 @@ fun setupFirRunConfiguration() {
             |    <module name="${junit.moduleName}" />
             |    <option name="MAIN_CLASS_NAME" value="" />
             |    <option name="METHOD_NAME" value="" />
-            |    <option name="TEST_OBJECT" value="directory" />
+            |    <option name="TEST_OBJECT" value="pattern" />
             |    <option name="VM_PARAMETERS" value="${junit.vmParameters}" />
             |    <option name="PARAMETERS" value="" />
             |    <option name="WORKING_DIRECTORY" value="${junit.workingDirectory}" />

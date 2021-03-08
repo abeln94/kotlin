@@ -27,7 +27,7 @@ buildscript {
     dependencies {
         bootstrapCompilerClasspath(kotlin("compiler-embeddable", bootstrapKotlinVersion))
 
-        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.21")
+        classpath("org.jetbrains.kotlin:kotlin-build-gradle-plugin:0.0.25")
         classpath(kotlin("gradle-plugin", bootstrapKotlinVersion))
         classpath(kotlin("serialization", bootstrapKotlinVersion))
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:0.9.17")
@@ -115,6 +115,10 @@ extra["ideaUltimateSandboxDir"] = project.file(ideaUltimateSandboxDir)
 extra["ideaPluginDir"] = project.file(ideaPluginDir)
 extra["ideaUltimatePluginDir"] = project.file(ideaUltimatePluginDir)
 extra["isSonatypeRelease"] = false
+val kotlinNativeVersionObject = project.kotlinNativeVersionValue()
+subprojects {
+    extra["kotlinNativeVersion"] = kotlinNativeVersionObject
+}
 
 // Work-around necessary to avoid setting null javaHome. Will be removed after support of lazy task configuration
 val jdkNotFoundConst = "JDK NOT FOUND"
@@ -130,6 +134,7 @@ extra["JDK_18"] = jdkPath("1.8")
 extra["JDK_9"] = jdkPath("9")
 extra["JDK_10"] = jdkPath("10")
 extra["JDK_11"] = jdkPath("11")
+extra["JDK_15"] = jdkPath("15")
 
 // allow opening the project without setting up all env variables (see KT-26413)
 if (!kotlinBuildProperties.isInIdeaSync) {
@@ -229,6 +234,7 @@ extra["compilerModules"] = arrayOf(
     ":compiler:frontend",
     ":compiler:frontend.common",
     ":compiler:frontend.java",
+    ":compiler:frontend:cfg",
     ":compiler:cli-common",
     ":compiler:ir.tree",
     ":compiler:ir.tree.impl",
@@ -236,6 +242,7 @@ extra["compilerModules"] = arrayOf(
     ":compiler:ir.psi2ir",
     ":compiler:ir.backend.common",
     ":compiler:backend.jvm",
+    ":compiler:backend.jvm:backend.jvm.entrypoint",
     ":compiler:backend.js",
     ":compiler:backend.wasm",
     ":compiler:ir.serialization.common",
@@ -324,17 +331,8 @@ extra["tasksWithWarnings"] = listOf(
     ":kotlin-stdlib:compileTestKotlin",
     ":kotlin-stdlib-jdk7:compileTestKotlin",
     ":kotlin-stdlib-jdk8:compileTestKotlin",
-    ":compiler:cli:compileKotlin",
-    ":compiler:frontend:compileKotlin",
-    ":compiler:fir:tree:compileKotlin",
-    ":compiler:fir:resolve:compileKotlin",
-    ":compiler:fir:checkers:compileKotlin",
-    ":compiler:fir:java:compileKotlin",
-    ":kotlin-scripting-compiler:compileKotlin",
-    ":kotlin-scripting-compiler:compileTestKotlin",
     ":plugins:uast-kotlin:compileKotlin",
-    ":plugins:uast-kotlin:compileTestKotlin",
-    ":plugins:uast-kotlin-idea:compileKotlin"
+    ":plugins:uast-kotlin:compileTestKotlin"
 )
 
 val tasksWithWarnings: List<String> by extra
@@ -773,6 +771,7 @@ tasks {
     register("toolsTest") {
         dependsOn(":tools:kotlinp:test")
         dependsOn(":native:kotlin-klib-commonizer:test")
+        dependsOn(":native:kotlin-klib-commonizer-api:test")
     }
 
     register("examplesTest") {
@@ -949,6 +948,12 @@ tasks {
             doFirst {
                 println("##teamcity[setParameter name='bootstrap.kotlin.version' value='$bootstrapKotlinVersion']")
             }
+        }
+    }
+
+    register("publishGradlePluginArtifacts") {
+        idePluginDependency {
+            dependsOnKotlinGradlePluginPublish()
         }
     }
 

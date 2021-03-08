@@ -5,14 +5,15 @@
 
 package org.jetbrains.kotlin.descriptors.commonizer.utils
 
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
-import org.jetbrains.kotlin.descriptors.ClassifierDescriptorWithTypeParameters
-import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirEntityId
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirName
+import org.jetbrains.kotlin.descriptors.commonizer.cir.CirPackageName
 import org.jetbrains.kotlin.descriptors.commonizer.cir.CirTypeSignature
-import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.types.*
+import org.jetbrains.kotlin.types.typeUtil.isNullableAny
 import org.jetbrains.kotlin.types.typeUtil.makeNotNullable
 
 internal inline val KotlinType.declarationDescriptor: ClassifierDescriptor
@@ -30,12 +31,21 @@ internal fun extractExpandedType(abbreviated: AbbreviatedType): SimpleType {
     return expanded
 }
 
-internal val ClassifierDescriptorWithTypeParameters.internedClassId: ClassId
+internal val ClassifierDescriptorWithTypeParameters.classifierId: CirEntityId
     get() = when (val owner = containingDeclaration) {
-        is PackageFragmentDescriptor -> internedClassId(owner.fqName.intern(), name.intern())
-        is ClassDescriptor -> internedClassId(owner.internedClassId, name.intern())
+        is PackageFragmentDescriptor -> CirEntityId.create(
+            packageName = CirPackageName.create(owner.fqName),
+            relativeName = CirName.create(name)
+        )
+        is ClassDescriptor -> owner.classifierId.createNestedEntityId(CirName.create(name))
         else -> error("Unexpected containing declaration type for $this: ${owner::class}, $owner")
     }
+
+internal inline val TypeParameterDescriptor.filteredUpperBounds: List<KotlinType>
+    get() = upperBounds.takeUnless { it.singleOrNull()?.isNullableAny() == true } ?: emptyList()
+
+internal inline val ClassDescriptor.filteredSupertypes: Collection<KotlinType>
+    get() = typeConstructor.supertypes.takeUnless { it.size == 1 && KotlinBuiltIns.isAny(it.first()) } ?: emptyList()
 
 internal val KotlinType.signature: CirTypeSignature
     get() {
@@ -50,17 +60,17 @@ private fun StringBuilder.buildTypeSignature(type: KotlinType, exploredTypeParam
         append(typeParameterDescriptor.name.asString())
 
         if (exploredTypeParameters.add(type.makeNotNullable())) { // print upper bounds once the first time when type parameter type is met
-            append(":[")
-            typeParameterDescriptor.upperBounds.forEachIndexed { index, upperBound ->
+            append(':').append('[')
+            typeParameterDescriptor.filteredUpperBounds.forEachIndexed { index, upperBound ->
                 if (index > 0)
-                    append(",")
+                    append(',')
                 buildTypeSignature(upperBound, exploredTypeParameters)
             }
-            append("]")
+            append(']')
         }
 
         if (type.isMarkedNullable)
-            append("?")
+            append('?')
     } else {
         // N.B. this is classifier type
         val abbreviation = (type as? AbbreviatedType)?.abbreviation ?: type
@@ -68,25 +78,25 @@ private fun StringBuilder.buildTypeSignature(type: KotlinType, exploredTypeParam
 
         val arguments = abbreviation.arguments
         if (arguments.isNotEmpty()) {
-            append("<")
+            append('<')
             arguments.forEachIndexed { index, argument ->
                 if (index > 0)
-                    append(",")
+                    append(',')
 
                 if (argument.isStarProjection)
-                    append("*")
+                    append('*')
                 else {
                     val variance = argument.projectionKind
                     if (variance != Variance.INVARIANT)
-                        append(variance).append(" ")
+                        append(variance.label).append(' ')
                     buildTypeSignature(argument.type, exploredTypeParameters)
                 }
             }
-            append(">")
+            append('>')
         }
 
         if (abbreviation.isMarkedNullable)
-            append("?")
+            append('?')
     }
 }
 

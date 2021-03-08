@@ -1632,6 +1632,21 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/export/nonIndetifierModuleName.kt");
         }
 
+        @TestMetadata("overriddenChainNonExportIntermediate.kt")
+        public void testOverriddenChainNonExportIntermediate() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenChainNonExportIntermediate.kt");
+        }
+
+        @TestMetadata("overriddenExternalMethodWithSameNameMethod.kt")
+        public void testOverriddenExternalMethodWithSameNameMethod() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenExternalMethodWithSameNameMethod.kt");
+        }
+
+        @TestMetadata("overriddenExternalMethodWithSameStableNameMethod.kt")
+        public void testOverriddenExternalMethodWithSameStableNameMethod() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenExternalMethodWithSameStableNameMethod.kt");
+        }
+
         @TestMetadata("overridenMethod.kt")
         public void testOverridenMethod() throws Exception {
             runTest("js/js.translator/testData/box/export/overridenMethod.kt");
@@ -5088,6 +5103,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("if.kt")
         public void testIf() throws Exception {
             runTest("js/js.translator/testData/box/jsCode/if.kt");
+        }
+
+        @TestMetadata("init.kt")
+        public void testInit() throws Exception {
+            runTest("js/js.translator/testData/box/jsCode/init.kt");
         }
 
         @TestMetadata("invocation.kt")

@@ -215,6 +215,16 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         runTest("compiler/testData/codegen/bytecodeListing/noRemoveAtInReadOnly.kt");
     }
 
+    @TestMetadata("overrideWithPrimitiveUpperBound.kt")
+    public void testOverrideWithPrimitiveUpperBound() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/overrideWithPrimitiveUpperBound.kt");
+    }
+
+    @TestMetadata("overrideWithPrimitiveUpperBound2.kt")
+    public void testOverrideWithPrimitiveUpperBound2() throws Exception {
+        runTest("compiler/testData/codegen/bytecodeListing/overrideWithPrimitiveUpperBound2.kt");
+    }
+
     @TestMetadata("privateCompanionFields.kt")
     public void testPrivateCompanionFields() throws Exception {
         runTest("compiler/testData/codegen/bytecodeListing/privateCompanionFields.kt");
@@ -438,6 +448,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
         @TestMetadata("kt44233.kt")
         public void testKt44233() throws Exception {
             runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/kt44233.kt");
+        }
+
+        @TestMetadata("ListAndSet.kt")
+        public void testListAndSet() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeListing/collectionStubs/ListAndSet.kt");
         }
 
         @TestMetadata("mapOfPrimitivesFullJdk.kt")
@@ -1426,6 +1441,11 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
                     runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/allCompatibility/deprecationWithDefault.kt");
                 }
 
+                @TestMetadata("interfaceProperty.kt")
+                public void testInterfaceProperty() throws Exception {
+                    runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/allCompatibility/interfaceProperty.kt");
+                }
+
                 @TestMetadata("jvmDefaultWithoutCompatibility.kt")
                 public void testJvmDefaultWithoutCompatibility() throws Exception {
                     runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/allCompatibility/jvmDefaultWithoutCompatibility.kt");
@@ -1457,6 +1477,42 @@ public class BytecodeListingTestGenerated extends AbstractBytecodeListingTest {
                     public void testPrimitiveAndNullable() throws Exception {
                         runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/allCompatibility/specialization/primitiveAndNullable.kt");
                     }
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/bytecodeListing/jvm8/defaults/enable")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Enable extends AbstractBytecodeListingTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInEnable() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/jvm8/defaults/enable"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("interfaceProperty.kt")
+                public void testInterfaceProperty() throws Exception {
+                    runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/enable/interfaceProperty.kt");
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/bytecodeListing/jvm8/defaults/noDefaultImpl")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class NoDefaultImpl extends AbstractBytecodeListingTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInNoDefaultImpl() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeListing/jvm8/defaults/noDefaultImpl"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
+                }
+
+                @TestMetadata("interfaceProperty.kt")
+                public void testInterfaceProperty() throws Exception {
+                    runTest("compiler/testData/codegen/bytecodeListing/jvm8/defaults/noDefaultImpl/interfaceProperty.kt");
                 }
             }
         }

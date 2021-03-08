@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.asJava.finder.JavaElementFinder
 import org.jetbrains.kotlin.backend.common.output.OutputFileCollection
 import org.jetbrains.kotlin.backend.common.output.SimpleOutputFileCollection
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
-import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensions
+import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensionsImpl
 import org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory
 import org.jetbrains.kotlin.backend.jvm.jvmPhases
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
@@ -88,7 +88,7 @@ object KotlinToJVMBytecodeCompiler {
             val includeRuntime = configuration.get(JVMConfigurationKeys.INCLUDE_RUNTIME, false)
             val noReflect = configuration.get(JVMConfigurationKeys.NO_REFLECT, false)
             val resetJarTimestamps = !configuration.get(JVMConfigurationKeys.NO_RESET_JAR_TIMESTAMPS, false)
-            CompileEnvironmentUtil.writeToJar(jarPath, includeRuntime, noReflect, resetJarTimestamps, mainClassFqName, outputFiles)
+            CompileEnvironmentUtil.writeToJar(jarPath, includeRuntime, noReflect, resetJarTimestamps, mainClassFqName, outputFiles, messageCollector)
             if (reportOutputFiles) {
                 val message = OutputMessageUtil.formatOutputMessage(outputFiles.asList().flatMap { it.sourceFiles }.distinct(), jarPath)
                 messageCollector.report(OUTPUT, message)
@@ -353,8 +353,8 @@ object KotlinToJVMBytecodeCompiler {
             performanceManager?.notifyGenerationStarted()
 
             performanceManager?.notifyIRTranslationStarted()
-            val extensions = JvmGeneratorExtensions()
-            val (moduleFragment, symbolTable, sourceManager, components) = firAnalyzerFacade.convertToIr(extensions)
+            val extensions = JvmGeneratorExtensionsImpl()
+            val (moduleFragment, symbolTable, components) = firAnalyzerFacade.convertToIr(extensions)
 
             performanceManager?.notifyIRTranslationFinished()
 
@@ -387,11 +387,14 @@ object KotlinToJVMBytecodeCompiler {
 
             ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
 
-            performanceManager?.notifyIRGenerationStarted()
+            performanceManager?.notifyIRLoweringStarted()
             generationState.beforeCompile()
             codegenFactory.generateModuleInFrontendIRMode(
-                generationState, moduleFragment, symbolTable, sourceManager, extensions, FirJvmBackendExtension(session, components)
-            )
+                generationState, moduleFragment, symbolTable, extensions, FirJvmBackendExtension(session, components)
+            ) {
+                performanceManager?.notifyIRLoweringFinished()
+                performanceManager?.notifyIRGenerationStarted()
+            }
             CodegenFactory.doCheckCancelled(generationState)
             generationState.factory.done()
 
@@ -403,10 +406,6 @@ object KotlinToJVMBytecodeCompiler {
                     dummyBindingContext.diagnostics
                 ),
                 environment.messageCollector
-            )
-
-            AnalyzerWithCompilerReport.reportBytecodeVersionErrors(
-                generationState.extraJvmDiagnosticsTrace.bindingContext, environment.messageCollector
             )
 
             performanceManager?.notifyIRGenerationFinished()
@@ -605,10 +604,6 @@ object KotlinToJVMBytecodeCompiler {
                 result.bindingContext.diagnostics
             ),
             environment.messageCollector
-        )
-
-        AnalyzerWithCompilerReport.reportBytecodeVersionErrors(
-            generationState.extraJvmDiagnosticsTrace.bindingContext, environment.messageCollector
         )
 
         ProgressIndicatorAndCompilationCanceledStatus.checkCanceled()
