@@ -52,6 +52,7 @@ class OptimizationMethodVisitor(
         RedundantBoxingMethodTransformer(generationState),
         StackPeepholeOptimizationsTransformer(),
         PopBackwardPropagationTransformer(),
+        AbelOptimization(),
         DeadCodeEliminationMethodTransformer(),
         RedundantGotoMethodTransformer(),
         RedundantNopsCleanupMethodTransformer(),
