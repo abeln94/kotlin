@@ -13,13 +13,12 @@ import org.jetbrains.org.objectweb.asm.tree.*
 
 
 const val ABEL_OPT_REMOVE_UNUSED = false
-const val ABEL_OPT_INVERT_WHILE = true
+const val ABEL_OPT_INVERT_WHILE = false
 
 
 class AbelOptimization : MethodTransformer() {
 
     override fun transform(internalClassName: String, methodNode: MethodNode) {
-        println("<Abel Naya>")
         val instructions = methodNode.instructions
 
         if (ABEL_OPT_REMOVE_UNUSED) {
@@ -95,7 +94,6 @@ class AbelOptimization : MethodTransformer() {
             }
         }
 
-        println("</Abel Naya>")
     }
 }
 

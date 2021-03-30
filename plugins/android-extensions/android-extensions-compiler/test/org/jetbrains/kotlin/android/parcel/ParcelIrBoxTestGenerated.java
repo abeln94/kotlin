@@ -64,6 +64,11 @@ public class ParcelIrBoxTestGenerated extends AbstractParcelIrBoxTest {
         runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/charSequence.kt");
     }
 
+    @TestMetadata("customNewArray.kt")
+    public void testCustomNewArray() throws Exception {
+        runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/customNewArray.kt");
+    }
+
     @TestMetadata("customParcelable.kt")
     public void testCustomParcelable() throws Exception {
         runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/customParcelable.kt");
@@ -164,6 +169,11 @@ public class ParcelIrBoxTestGenerated extends AbstractParcelIrBoxTest {
         runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/kt36658.kt");
     }
 
+    @TestMetadata("kt39981.kt")
+    public void testKt39981() throws Exception {
+        runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/kt39981.kt");
+    }
+
     @TestMetadata("listKinds.kt")
     public void testListKinds() throws Exception {
         runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/listKinds.kt");
@@ -197,6 +207,11 @@ public class ParcelIrBoxTestGenerated extends AbstractParcelIrBoxTest {
     @TestMetadata("nestedParcelable.kt")
     public void testNestedParcelable() throws Exception {
         runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/nestedParcelable.kt");
+    }
+
+    @TestMetadata("newArray.kt")
+    public void testNewArray() throws Exception {
+        runTest("plugins/android-extensions/android-extensions-compiler/testData/parcel/box/newArray.kt");
     }
 
     @TestMetadata("nullableTypes.kt")

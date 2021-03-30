@@ -321,6 +321,7 @@ private val jvmFilePhases = listOf(
 
     flattenStringConcatenationPhase,
     foldConstantLoweringPhase,
+    abelPhase,
     computeStringTrimPhase,
     jvmStringConcatenationLowering,
 
