@@ -38,6 +38,7 @@ internal fun KtElement.getDynamicOperator(): IrDynamicOperator {
                 KtTokens.PLUS -> IrDynamicOperator.BINARY_PLUS
                 KtTokens.MINUS -> IrDynamicOperator.BINARY_MINUS
                 KtTokens.MUL -> IrDynamicOperator.MUL
+                KtTokens.POW -> IrDynamicOperator.POW
                 KtTokens.DIV -> IrDynamicOperator.DIV
                 KtTokens.PERC -> IrDynamicOperator.MOD
                 KtTokens.LT -> IrDynamicOperator.LT

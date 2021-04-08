@@ -69,7 +69,7 @@ import static org.jetbrains.kotlin.resolve.BindingContext.*;
 class CodegenAnnotatingVisitor extends KtVisitorVoid {
     private static final TokenSet BINARY_OPERATIONS = TokenSet.orSet(
             AUGMENTED_ASSIGNMENTS,
-            TokenSet.create(PLUS, MINUS, MUL, DIV, PERC, RANGE, LT, GT, LTEQ, GTEQ, IDENTIFIER)
+            TokenSet.create(PLUS, MINUS, MUL, POW, DIV, PERC, RANGE, LT, GT, LTEQ, GTEQ, IDENTIFIER)
     );
 
     private final Map<String, Integer> anonymousSubclassesCount = new HashMap<>();

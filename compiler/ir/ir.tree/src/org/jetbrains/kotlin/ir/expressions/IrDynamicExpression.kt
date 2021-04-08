@@ -48,6 +48,7 @@ enum class IrDynamicOperator(val image: String, val isAssignmentOperator: Boolea
     BINARY_PLUS("+"),
     BINARY_MINUS("-"),
     MUL("*"),
+    POW("**"),
     DIV("/"),
     MOD("%"),
     GT(">"),

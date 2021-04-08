@@ -247,6 +247,10 @@ public final class IrDynamicOperatorExpression extends
      * <code>INVOKE = 30;</code>
      */
     INVOKE(29, 30),
+    /**
+     * <code>INVOKE = 31;</code>
+     */
+    POW(30, 31),
     ;
 
     /**
@@ -405,6 +409,7 @@ public final class IrDynamicOperatorExpression extends
         case 28: return MODEQ;
         case 29: return ARRAY_ACCESS;
         case 30: return INVOKE;
+        case 31: return POW;
         default: return null;
       }
     }

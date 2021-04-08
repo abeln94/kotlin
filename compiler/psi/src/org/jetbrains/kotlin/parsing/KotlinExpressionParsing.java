@@ -67,7 +67,7 @@ public class KotlinExpressionParsing extends AbstractKotlinParsing {
             CONTINUE_KEYWORD, OBJECT_KEYWORD, IF_KEYWORD, TRY_KEYWORD, ELSE_KEYWORD, WHILE_KEYWORD, DO_KEYWORD,
             WHEN_KEYWORD, RBRACKET, RBRACE, RPAR, PLUSPLUS, MINUSMINUS, EXCLEXCL,
             //            MUL,
-            PLUS, MINUS, EXCL, DIV, PERC, LTEQ,
+            PLUS, MINUS, EXCL, POW, DIV, PERC, LTEQ,
             // TODO GTEQ,   foo<bar, baz>=x
             EQEQEQ, EXCLEQEQEQ, EQEQ, EXCLEQ, ANDAND, OROR, SAFE_ACCESS, ELVIS,
             SEMICOLON, RANGE, EQ, MULTEQ, DIVEQ, PERCEQ, PLUSEQ, MINUSEQ, NOT_IN, NOT_IS,
@@ -168,7 +168,7 @@ public class KotlinExpressionParsing extends AbstractKotlinParsing {
             }
         },
 
-        MULTIPLICATIVE(MUL, DIV, PERC),
+        MULTIPLICATIVE(MUL, POW, DIV, PERC),
         ADDITIVE(PLUS, MINUS),
         RANGE(KtTokens.RANGE),
         SIMPLE_NAME(IDENTIFIER),

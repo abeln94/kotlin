@@ -95,6 +95,7 @@ public interface KtTokens {
     KtSingleValueToken PLUSPLUS    = new KtSingleValueToken("PLUSPLUS", "++");
     KtSingleValueToken MINUSMINUS  = new KtSingleValueToken("MINUSMINUS", "--");
     KtSingleValueToken MUL         = new KtSingleValueToken("MUL", "*");
+    KtSingleValueToken POW         = new KtSingleValueToken("POW", "**");
     KtSingleValueToken PLUS        = new KtSingleValueToken("PLUS", "+");
     KtSingleValueToken MINUS       = new KtSingleValueToken("MINUS", "-");
     KtSingleValueToken EXCL        = new KtSingleValueToken("EXCL", "!");
@@ -254,7 +255,7 @@ public interface KtTokens {
     TokenSet WHITE_SPACE_OR_COMMENT_BIT_SET = TokenSet.orSet(COMMENTS, WHITESPACES);
 
     TokenSet STRINGS = TokenSet.create(CHARACTER_LITERAL, REGULAR_STRING_PART);
-    TokenSet OPERATIONS = TokenSet.create(AS_KEYWORD, AS_SAFE, IS_KEYWORD, IN_KEYWORD, DOT, PLUSPLUS, MINUSMINUS, EXCLEXCL, MUL, PLUS,
+    TokenSet OPERATIONS = TokenSet.create(AS_KEYWORD, AS_SAFE, IS_KEYWORD, IN_KEYWORD, DOT, PLUSPLUS, MINUSMINUS, EXCLEXCL, MUL, POW, PLUS,
                                           MINUS, EXCL, DIV, PERC, LT, GT, LTEQ, GTEQ, EQEQEQ, EXCLEQEQEQ, EQEQ, EXCLEQ, ANDAND, OROR,
                                           SAFE_ACCESS, ELVIS,
                                           RANGE, EQ, MULTEQ, DIVEQ, PERCEQ, PLUSEQ, MINUSEQ,

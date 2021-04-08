@@ -376,6 +376,7 @@ private val nameToOperationConventionOrigin = mutableMapOf(
     OperatorNameConventions.PLUS to IrStatementOrigin.PLUS,
     OperatorNameConventions.MINUS to IrStatementOrigin.MINUS,
     OperatorNameConventions.TIMES to IrStatementOrigin.MUL,
+    OperatorNameConventions.POW to IrStatementOrigin.POW,
     OperatorNameConventions.DIV to IrStatementOrigin.DIV,
     OperatorNameConventions.MOD to IrStatementOrigin.PERC,
     OperatorNameConventions.REM to IrStatementOrigin.PERC,

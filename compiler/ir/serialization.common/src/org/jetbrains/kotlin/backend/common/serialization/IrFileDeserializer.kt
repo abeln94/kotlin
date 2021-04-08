@@ -781,6 +781,7 @@ abstract class IrFileDeserializer(
             ProtoDynamicOperatorExpression.IrDynamicOperator.BINARY_PLUS -> IrDynamicOperator.BINARY_PLUS
             ProtoDynamicOperatorExpression.IrDynamicOperator.BINARY_MINUS -> IrDynamicOperator.BINARY_MINUS
             ProtoDynamicOperatorExpression.IrDynamicOperator.MUL -> IrDynamicOperator.MUL
+            ProtoDynamicOperatorExpression.IrDynamicOperator.POW -> IrDynamicOperator.POW
             ProtoDynamicOperatorExpression.IrDynamicOperator.DIV -> IrDynamicOperator.DIV
             ProtoDynamicOperatorExpression.IrDynamicOperator.MOD -> IrDynamicOperator.MOD
 

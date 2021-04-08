@@ -57,6 +57,7 @@ public class OperatorConventions {
 
     public static final ImmutableBiMap<KtSingleValueToken, Name> BINARY_OPERATION_NAMES = ImmutableBiMap.<KtSingleValueToken, Name>builder()
             .put(KtTokens.MUL, TIMES)
+            .put(KtTokens.POW, POW)
             .put(KtTokens.PLUS, PLUS)
             .put(KtTokens.MINUS, MINUS)
             .put(KtTokens.DIV, DIV)
@@ -71,7 +72,7 @@ public class OperatorConventions {
 
     public static final ImmutableSet<KtSingleValueToken> NOT_OVERLOADABLE =
             ImmutableSet.of(KtTokens.ANDAND, KtTokens.OROR, KtTokens.ELVIS, KtTokens.EQEQEQ, KtTokens.EXCLEQEQEQ);
-    
+
     public static final ImmutableSet<KtSingleValueToken> INCREMENT_OPERATIONS =
             ImmutableSet.of(KtTokens.PLUSPLUS, KtTokens.MINUSMINUS);
 

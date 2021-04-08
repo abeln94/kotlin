@@ -48,6 +48,7 @@ interface IrStatementOrigin {
     object PLUS : IrStatementOriginImpl("PLUS")
     object MINUS : IrStatementOriginImpl("MINUS")
     object MUL : IrStatementOriginImpl("MUL")
+    object POW : IrStatementOriginImpl("POW")
     object DIV : IrStatementOriginImpl("DIV")
     object PERC : IrStatementOriginImpl("PERC")
     object RANGE : IrStatementOriginImpl("RANGE")

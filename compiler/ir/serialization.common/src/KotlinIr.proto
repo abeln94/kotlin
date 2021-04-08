@@ -345,6 +345,8 @@ message IrDynamicOperatorExpression {
 
     ARRAY_ACCESS = 29;
     INVOKE = 30;
+
+    POW = 31;
   }
   required IrDynamicOperator operator = 1;
   required IrExpression receiver = 2;

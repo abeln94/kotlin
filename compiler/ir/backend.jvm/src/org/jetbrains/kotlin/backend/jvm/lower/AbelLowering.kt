@@ -24,6 +24,8 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
+val ABEL_OPT_INLINE_VAL = false
+
 internal val abelPhase = makeIrFilePhase(
     ::AbelLowering,
     name = "Abel",
@@ -34,7 +36,7 @@ class AbelLowering(val context: JvmBackendContext) : IrElementTransformerVoid(),
     val foldConstant = FoldConstantLowering(context)
 
     override fun lower(irBody: IrBody, container: IrDeclaration) {
-        while (true) {
+        while (ABEL_OPT_INLINE_VAL) {
             val inlined: MutableList<IrValueDeclaration> = mutableListOf()
 
             // replace getters of IrConst vals with its initializer

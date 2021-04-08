@@ -847,6 +847,7 @@ open class IrFileSerializer(
         IrDynamicOperator.BINARY_PLUS -> ProtoDynamicOperatorExpression.IrDynamicOperator.BINARY_PLUS
         IrDynamicOperator.BINARY_MINUS -> ProtoDynamicOperatorExpression.IrDynamicOperator.BINARY_MINUS
         IrDynamicOperator.MUL -> ProtoDynamicOperatorExpression.IrDynamicOperator.MUL
+        IrDynamicOperator.POW -> ProtoDynamicOperatorExpression.IrDynamicOperator.POW
         IrDynamicOperator.DIV -> ProtoDynamicOperatorExpression.IrDynamicOperator.DIV
         IrDynamicOperator.MOD -> ProtoDynamicOperatorExpression.IrDynamicOperator.MOD
 

@@ -305,6 +305,7 @@ LONELY_BACKTICK=`
 ")"          { return KtTokens.RPAR      ; }
 "."          { return KtTokens.DOT       ; }
 "*"          { return KtTokens.MUL       ; }
+"**"         { return KtTokens.POW       ; }
 "+"          { return KtTokens.PLUS      ; }
 "-"          { return KtTokens.MINUS     ; }
 "!"          { return KtTokens.EXCL      ; }

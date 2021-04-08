@@ -130,6 +130,7 @@ object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVari
 
     private fun KtBinaryExpression.canBeAugmented() = this.operationToken == KtTokens.PLUS
             || this.operationToken == KtTokens.MUL
+            || this.operationToken == KtTokens.POW
             || this.operationToken == KtTokens.MINUS
             || this.operationToken == KtTokens.DIV
             || this.operationToken == KtTokens.PERC
