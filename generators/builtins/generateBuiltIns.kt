@@ -57,7 +57,7 @@ fun readCopyrightNoticeFromProfile(copyrightProfile: File): String {
         XPathFactory.newInstance().newXPath().evaluate("/component/copyright/option[@name='notice']/@value", InputSource(reader))
     }
     val yearTemplate = "&#36;today.year"
-    val year = java.time.LocalDate.now().year.toString()
+    val year = "2020"//java.time.LocalDate.now().year.toString()
     assert(yearTemplate in template)
 
     return template.replace(yearTemplate, year).lines().joinToString("", prefix = "/*\n", postfix = " */\n") { " * $it\n" }

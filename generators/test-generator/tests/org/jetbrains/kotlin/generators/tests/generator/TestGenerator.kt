@@ -67,7 +67,7 @@ class TestGenerator(
         val out = StringBuilder()
         val p = Printer(out)
 
-        val year = GregorianCalendar()[Calendar.YEAR]
+        val year = 2020//GregorianCalendar()[Calendar.YEAR]
         p.println(
             """/*
                 | * Copyright 2010-$year JetBrains s.r.o. and Kotlin Programming Language contributors.

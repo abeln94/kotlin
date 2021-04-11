@@ -56,7 +56,7 @@ open class WriteCopyrightToFile : DefaultTask() {
 
         val copyrightBlock = node.children().filterIsInstance<Node>().single()
         val noticeNode = copyrightBlock.children().filterIsInstance<Node>().single { it.attribute("name") == "notice" }
-        return noticeNode.attribute("value").toString().replace("&#36;today.year", GregorianCalendar()[Calendar.YEAR].toString())
+        return noticeNode.attribute("value").toString().replace("&#36;today.year", "2020"/*GregorianCalendar()[Calendar.YEAR].toString()*/)
     }
 
     fun Project.readCopyrightCommented(): String {
