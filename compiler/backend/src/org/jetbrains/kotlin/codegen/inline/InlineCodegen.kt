@@ -361,7 +361,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
         }
     }
 
-    protected fun putArgumentOrCapturedToLocalVal(
+    protected fun putArgumentOrCapturedToLocalVal( // ABEL NAYA: maybe we can skip the locals generator?
         jvmKotlinType: JvmKotlinType,
         stackValue: StackValue,
         capturedParamIndex: Int,
